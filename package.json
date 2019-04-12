@@ -1,0 +1,20 @@
+{
+  "name": "alttprGtBetBot",
+  "version": "1.0.0",
+  "description": "Bot for handling custom behaviors on Twitch stream",
+  "main": "bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Twitch",
+    "Bot",
+    "node"
+  ],
+  "author": "Christopher Carter",
+  "license": "ISC",
+  "dependencies": {
+    "config": "^3.1.0",
+    "tmi.js": "^1.4.2"
+  }
+}
