@@ -111,7 +111,9 @@ function onConnectedHandler (addr, port) {
 }
 
 function isMod(context){
-  if(context['user-type'] == "mod" || context['badges']['broadcaster'] == 1){
-    return true;
+  if(context['badges']){
+    if(context['user-type'] == "mod" || context['badges']['broadcaster'] == 1){
+      return true;
+    }
   }
 }
