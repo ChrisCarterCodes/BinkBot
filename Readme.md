@@ -21,8 +21,8 @@ At this time the bot was developed on top of Node v10.15.3
 All \<number\> parameter commands are restricted to 1-21 for valid chest numbers
 
 ### Wheel Weight Tracker
-* **wheelvotes** - Shows current count of votes for each variation category. 
-* **wheeladd** <username> <choice> - Manually updates a user's wheel choice, usable in case they forget to add a category in their resub or type it wrong.
+* **!wheelvotes** - Shows current count of votes for each variation category. 
+* **!wheeladd** <username> <choice> - Manually updates a user's wheel choice, usable in case they forget to add a category in their resub or type it wrong.
 
 All **bold** commands are restricted to moderator/host only commands
 
