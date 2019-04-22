@@ -11,6 +11,7 @@ You may need to restart after installing node for the bot to run.
 At this time the bot was developed on top of Node v10.15.3
 
 ## Commands
+### GT Bets
 * **!bet open** - enables betting mode, wipes out previous winners and bets
 * !bet \<number\> - set the user's bet. Additional calls will overwrite last bet.
 * **!bet close** - closes betting mode. All bets are locked in.
@@ -18,6 +19,11 @@ At this time the bot was developed on top of Node v10.15.3
 * **!betstatus** - Rough command, shows current bet object status, but not user friendly pretty output.
 
 All \<number\> parameter commands are restricted to 1-21 for valid chest numbers
+
+### Wheel Weight Tracker
+* **!wheelvotes** - Shows current count of votes for each variation category. 
+* **!wheeladd** <username> <choice> - Manually updates a user's wheel choice, usable in case they forget to add a category in their resub or type it wrong.
+  * **!wheelclear** <choice> - Removes votes for a category after the wheel picks it.
 
 All **bold** commands are restricted to moderator/host only commands
 
@@ -32,4 +38,4 @@ In config/default.json, fill in the relevant fields:
 
 There is an example config called example.json for how things should be formatted that you may use to inform your configuration.
 
-Once the default.json is configured, you can either run via the command line with "npm install" followed by "node bot.js" or use the provided startBot.bat file for Windows users. If your default.json is not configured properly, you will likely receive an error and the bot will terminate.
+Once the defaul.json is configured, you can either run via the command line with "npm install" folloed by "node bot.js" or use the provided startBot.bat file for Windows users. If your deafult.json is not configured properly, you will likely receive an error and the bot will terminate.
