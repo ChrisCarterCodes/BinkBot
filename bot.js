@@ -17,6 +17,9 @@ db.serialize(function() {
 });
 // Define configuration options
 const opts = {
+  connection: {
+    reconnect: true // This
+  },
   identity: {
     username: config.get('Bot.username'),
     password: config.get('Bot.password')
@@ -262,7 +265,3 @@ function isSub(context){
   }
 }
 
-process.on('uncaughtException', function (err) {
-  console.log('Caught exception: ', err);
-  console.log("\x1b[32m",'Bot will keep running')
-});
