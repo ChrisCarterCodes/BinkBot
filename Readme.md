@@ -32,10 +32,10 @@ All **bold** commands are restricted to moderator/host only commands
 To set the bot up, you'll need to create a new Twitch user to be the bot, including "bot" somehow in the name would be recommended. After creation, log in with the bot account and visit https://twitchapps.com/tmi/ . This will let you generate an oauth token for authentication with Twitch. Record this token, including the "oauth:" portion at the beginning.
 
 In config/default.json, fill in the relevant fields:
-*  "username": "<bot username>" - your bot username, be sure to include it inside the double quotes (")
+* "username": "<bot username>" - your bot username, be sure to include it inside the double quotes (")
 * "password": "<oauth token here>" - Include the whole string, including the "oauth:"
 * "channels": ["<channel bot should join>"] - channel(s) the bot should be in, this is usually the end of the link for your channel
 
 There is an example config called example.json for how things should be formatted that you may use to inform your configuration.
 
-Once the defaul.json is configured, you can either run via the command line with "npm install" folloed by "node bot.js" or use the provided startBot.bat file for Windows users. If your deafult.json is not configured properly, you will likely receive an error and the bot will terminate.
+Once the default.json is configured, you can either run via the command line with "npm install" followed by "node bot.js" or use the provided startBot.bat file for Windows users. If your default.json is not configured properly, you will likely receive an error and the bot will terminate.
