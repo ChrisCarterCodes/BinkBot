@@ -13,7 +13,7 @@ const categories= [ "enemizer", "boss shuffle", "retro", "keysanity", "inverted"
 
 //Define base db tables
 db.serialize(function() {
-  db.run("CREATE TABLE IF NOT EXISTS userVotes (userName TEXT PRIMARY KEY, categoryName TEXT )");
+  db.run("CREATE TABLE IF NOT EXISTS userVotes (userName TEXT , categoryName TEXT )");
 });
 // Define configuration options
 const opts = {
@@ -130,6 +130,11 @@ function onMessageHandler (target, context, msg, self, data) {
   if(commandParts[0].toLowerCase() == '!wheelvotes'  ){
     printWheel(target);
   }
+  if(commandParts[0].toLowerCase() == '!wheelclear'  ){
+    if(commandParts.length >1 && isMod){
+      clearWheel(commandParts[1]);
+    }
+  }
 }
 
 function onSubHandler (channel, username, method, message, userstate) {
@@ -225,9 +230,19 @@ function printWheel(target){
     });
   });
   response.then((value) =>{
-    client.say(target, `${value}`);
-    console.log(value);
+    if(value){
+      client.say(target, `${value}`);
+    }
+    else{
+      client.say(target, "No votes!");
+    }
   });
+}
+
+function clearWheel(targetCategory){
+  var deleteStmt= db.prepare ("DELETE FROM userVotes WHERE categoryName like ?");
+  deleteStmt.run("%"+targetCategory+"%");
+  deleteStmt.finalize();
 }
 
 function isMod(context){
