@@ -59,11 +59,11 @@ function gtBets(context, target, action, modFlag){
         client.say(target, `You either missed the betting, or we're not headed to GT. Or you're bored.`);
         return;
       }
-      if(action <=21 && action>=1){
+      if(action <=22 && action>=1){
         bets[user] = action;
       }
       else{
-        client.say(target, `There's 21 checks in GT, buddy.`);
+        client.say(target, `There's 22 checks in GT, buddy.`);
       }
     }
     console.log(bets);
@@ -76,7 +76,7 @@ function gtWinner(target, context, action){
       return;
   }
   if(!gtBetMode){
-    if(action <=21 && action>=1){
+    if(action <=22 && action>=1){
       for (user in bets){
         if (bets[user] == action){winners.push(user)}
       }
@@ -84,7 +84,7 @@ function gtWinner(target, context, action){
       client.say(target, `The winning chest was ${action}! Congratulations to ${winners.join(" , ")}`);
     }
     else{
-      client.say(target, `There's 21 checks in GT, buddy.`);
+      client.say(target, `There's 22 checks in GT, buddy.`);
     }
   }
 }
