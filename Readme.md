@@ -11,6 +11,7 @@ You may need to restart after installing node for the bot to run.
 At this time the bot was developed on top of Node v10.15.3
 
 ## Commands
+### GT Bets
 * **!bet open** - enables betting mode, wipes out previous winners and bets
 * !bet \<number\> - set the user's bet. Additional calls will overwrite last bet.
 * **!bet close** - closes betting mode. All bets are locked in.
@@ -18,6 +19,10 @@ At this time the bot was developed on top of Node v10.15.3
 * **!betstatus** - Rough command, shows current bet object status, but not user friendly pretty output.
 
 All \<number\> parameter commands are restricted to 1-21 for valid chest numbers
+
+### Wheel Weight Tracker
+* **!wheelvotes** - Shows current count of votes for each variation category. 
+* **!wheeladd** <username> <choice> - Manually updates a user's wheel choice, usable in case they forget to add a category in their resub or type it wrong.
 
 All **bold** commands are restricted to moderator/host only commands
 
