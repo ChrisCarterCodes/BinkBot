@@ -142,7 +142,7 @@ function onSubHandler (channel, username, method, message, userstate) {
 }
 
 function onSubResubHandler (channel, username, months, message, userstate, methods) {
-  updateWheel(username, message, target);
+  updateWheel(username, message, channel);
 }
 
 
