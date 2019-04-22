@@ -261,3 +261,8 @@ function isSub(context){
     return true;
   }
 }
+
+process.on('uncaughtException', function (err) {
+  console.log('Caught exception: ', err);
+  console.log("\x1b[32m",'Bot will keep running')
+});
