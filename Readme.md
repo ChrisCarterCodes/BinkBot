@@ -38,4 +38,4 @@ In config/default.json, fill in the relevant fields:
 
 There is an example config called example.json for how things should be formatted that you may use to inform your configuration.
 
-Once the defaul.json is configured, you can either run via the command line with "npm install" folloed by "node bot.js" or use the provided startBot.bat file for Windows users. If your deafult.json is not configured properly, you will likely receive an error and the bot will terminate.
+Once the default.json is configured, you can either run via the command line with "npm install" followed by "node bot.js" or use the provided startBot.bat file for Windows users. If your default.json is not configured properly, you will likely receive an error and the bot will terminate.
