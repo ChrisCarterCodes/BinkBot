@@ -23,8 +23,8 @@ All \<number\> parameter commands are restricted to 1-21 for valid chest numbers
 ### Wheel Weight Tracker
 * **!wheelvotes** - Shows current count of votes for each variation category. 
 * **!wheeladd** <username> <choice> - Manually updates a user's wheel choice, usable in case they forget to add a category in their resub or type it wrong.
-  * **!wheelclear** <choice> - Removes votes for a category after the wheel picks it.
- * **!wheeloptions** - Shows valid wheel category options that can be in the wheeladd or sub messages
+* **!wheelclear** <choice> - Removes votes for a category after the wheel picks it.
+* **!wheeloptions** - Shows valid wheel category options that can be in the wheeladd or sub messages
 
 All **bold** commands are restricted to moderator/host only commands
 
