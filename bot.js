@@ -9,7 +9,7 @@ const categories= [ "enemizer", "boss shuffle", "retro", "keysanity", "inverted"
                       "standard", "open",
                       "kill pig", "all dungeons", 
                       "assured", "random weapon", "swordless",
-                      "normal", "hard", "month" ];
+                      "normal", "hard" ];
 
 //Define base db tables
 db.serialize(function() {
