@@ -9,7 +9,7 @@ const categories= [ "enemizer", "boss shuffle", "retro", "keysanity", "inverted"
                       "standard", "open",
                       "kill pig", "all dungeons", 
                       "assured", "random weapon", "swordless",
-                      "normal", "hard" ];
+                      "normal", "hard", "month" ];
 
 //Define base db tables
 db.serialize(function() {
@@ -94,10 +94,10 @@ function gtWinner(target, context, action){
 
 // Called every time a message comes in
 function onMessageHandler (target, context, msg, self, data) {
-  console.log(msg);
+/*   console.log(msg);
   console.log(self);
   console.log(context);
-  console.log(data);
+  console.log(data); */
   if (self) { return; } // Ignore messages from the bot
 
   // Remove whitespace from chat message
@@ -155,6 +155,7 @@ function onConnectedHandler (addr, port) {
 }
 
 function updateWheel (user, message, target){
+  if(!message){return;}
   message= message.toLowerCase();
   
   var length= categories.length;
@@ -162,16 +163,18 @@ function updateWheel (user, message, target){
   var i
   for( i=0; i < length; i++){
     if (message.indexOf(categories[i])!=-1) {
+      console.log(`Got one: ${categories[i]}`);
       votedCategory= categories[i];
       break;
     }
   }
   if(votedCategory == "Invalid"){
     if(message.includes('!wheeladd')){
-      client.say(target, `Sorry, but there was no valid option in your message. Try again?`);
+      client.say(target, `You didn't request a variation to put weight into! Type !wheel for more info.`);
     }
   }
   else{
+    console.log(votedCategory);
     var insertStmt= db.prepare("INSERT OR REPLACE INTO userVotes VALUES (? , ?) ");
     insertStmt.run(user, votedCategory);
     insertStmt.finalize();

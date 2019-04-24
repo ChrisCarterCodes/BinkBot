@@ -1,7 +1,7 @@
 {
     "Bot": {
-        "username": "kyoudai_bot",
-        "password": "oauth:f4nte6z8lhkvbih84fvh9d9umup120",
-        "channels": ["kyoudai_shojin"]
+        "username": "<bot username>",
+        "password": "<oath token here>",
+        "channels": ["<channel bot should join>"]
     }
 }
