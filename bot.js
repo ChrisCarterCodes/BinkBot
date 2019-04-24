@@ -130,6 +130,9 @@ function onMessageHandler (target, context, msg, self, data) {
       updateWheel(commandParts[1], msg, target);
     }
   }
+  if(commandParts[0].toLowerCase() == '!wheeloptions'  ){
+    client.say(target, `Valid categories: ${categories.join(" , ")}`);
+  }
   if(commandParts[0].toLowerCase() == '!wheelvotes'  ){
     printWheel(target);
   }
