@@ -98,10 +98,11 @@ function gtWinner(target, context, action){
 
 // Called every time a message comes in
 function onMessageHandler (target, context, msg, self, data) {
-/*   console.log(msg);
+  console.log(msg);
   console.log(self);
   console.log(context);
-  console.log(data); */
+  console.log(data); 
+  
   if (self) { return; } // Ignore messages from the bot
 
   // Remove whitespace from chat message

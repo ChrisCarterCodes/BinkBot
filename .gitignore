@@ -2,3 +2,4 @@ node_modules/
 weights
 
 .env
+.DS_Store
