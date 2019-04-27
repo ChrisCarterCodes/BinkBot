@@ -1,7 +1,10 @@
+const path = require('path');
+require('dotenv').config({path: path.join(__dirname, '.env')});
+
 const tmi = require('tmi.js');
-const config = require('config');
-var sqlite3 = require('sqlite3').verbose();
-var db = new sqlite3.cached.Database('weights');
+const config = require('./config/config');
+const sqlite3 = require('sqlite3').verbose();
+const db = new sqlite3.cached.Database('weights');
 
 console.log(config);
 
@@ -21,17 +24,17 @@ const opts = {
     reconnect: true // This
   },
   identity: {
-    username: config.get('Bot.username'),
-    password: config.get('Bot.password')
+    username: config['Bot.username'],
+    password: config['Bot.password'],
   },
-  channels: config.get('Bot.channels')
+  channels: config['Bot.channels']
 };
 
 // Create a client with our options
 const client = new tmi.client(opts);
-var gtBetMode= false;
-var bets= {};
-var winners=[];
+let gtBetMode= false;
+let bets= {};
+let winners=[];
 
 // Register our event handlers (defined below)
 client.on('message', onMessageHandler);
@@ -43,7 +46,7 @@ client.on('resub', onSubResubHandler)
 client.connect();
 
 function gtBets(context, target, action, modFlag){
-  var user=context.username;
+  let user=context.username;
     if(action == 'open' && !gtBetMode && modFlag){
       //enable bets
       gtBetMode=true;
@@ -105,41 +108,52 @@ function onMessageHandler (target, context, msg, self, data) {
   const commandParts= commandName.split(" ");
 
   // determine permission level
-  var modFlag=isMod(context);
+  let modFlag=isMod(context);
 
-  if(commandParts[0].toLowerCase() == '!bet'  ){
-    if(commandParts.length > 1){
-      gtBets(context, target, commandParts[1], modFlag);
-    }
-    else{
-      client.say(target, `Place your bets on GT! Just enter '!bet <number>' to bet!`);
-    }
-  }
-  if(commandParts[0].toLowerCase() == '!betwinner'  ){
-    if(commandParts.length > 1 && modFlag){
-      gtWinner(target, context, commandParts[1]);
-    }
-  }
-  if(commandParts[0].toLowerCase() == '!betstatus'  ){
-    var outputText=JSON.stringify(bets, null, 1);
-    outputText=outputText.replace(/("{|}")/gi,'"');
-    client.say(target, `Current bets: ${outputText}`);
-  }
-  if(commandParts[0].toLowerCase() == '!wheeladd'  ){
-    if(commandParts.length > 2 && isMod){
-      updateWheel(commandParts[1], msg, target);
-    }
-  }
-  if(commandParts[0].toLowerCase() == '!wheeloptions'  ){
-    client.say(target, `Valid categories: ${categories.join(" , ")}`);
-  }
-  if(commandParts[0].toLowerCase() == '!wheelvotes'  ){
-    printWheel(target);
-  }
-  if(commandParts[0].toLowerCase() == '!wheelclear'  ){
-    if(commandParts.length >1 && isMod){
-      clearWheel(commandParts[1]);
-    }
+  let outputText = '' // initialize in case we use
+  let cmd = commandParts[0].toLowerCase()
+
+  if(cmd[0] !== '!') 
+    return // we don't have a command, don't process
+
+  switch (cmd) {
+    case '!bet':
+      if (commandParts.length > 1) {
+        gtBets(context, target, commandParts[1], modFlag);
+      }
+      else {
+        client.say(target, `Place your bets on GT! Just enter '!bet <number>' to bet!`);
+      }
+      break;
+    case '!betwinner':
+      if (commandParts.length > 1 && modFlag) {
+        gtWinner(target, context, commandParts[1]);
+      }
+      break;
+    case '!betstatus':
+      outputText = JSON.stringify(bets, null, 1);
+      outputText = outputText.replace(/("{|}")/gi, '"');
+      client.say(target, `Current bets: ${outputText}`);
+      break;
+    case '!wheeladd':
+      if (commandParts.length > 2 && isMod) {
+        updateWheel(commandParts[1], msg, target);
+      }
+      break;
+    case '!wheeloptions':
+      client.say(target, `Valid categories: ${categories.join(" , ")}`);
+      break;
+    case '!wheelvotes':
+      printWheel(target);
+      break;
+    case '!wheelclear':
+      if (commandParts.length > 1 && isMod) {
+        clearWheel(commandParts[1]);
+      }
+      break;
+    default:
+      console.warn('unknown command: %s', cmd)
+      break;
   }
 }
 
@@ -161,9 +175,9 @@ function updateWheel (user, message, target){
   if(!message){return;}
   message= message.toLowerCase();
   
-  var length= categories.length;
-  var votedCategory= "Invalid";
-  var i
+  let length= categories.length;
+  let votedCategory= "Invalid";
+  let i
   for( i=0; i < length; i++){
     if (message.indexOf(categories[i])!=-1) {
       console.log(`Got one: ${categories[i]}`);
@@ -173,15 +187,15 @@ function updateWheel (user, message, target){
   }
   if(votedCategory == "Invalid"){
     if(message.includes('!wheeladd')){
-      client.say(target, `You didn't request a variation to put weight into! Type !wheel for more info.`);
+      client.say(target, `You didn't request a letiation to put weight into! Type !wheel for more info.`);
     }
   }
   else{
     console.log(votedCategory);
-    var insertStmt= db.prepare("INSERT OR REPLACE INTO userVotes VALUES (? , ?) ");
+    let insertStmt= db.prepare("INSERT OR REPLACE INTO userVotes VALUES (? , ?) ");
     insertStmt.run(user, votedCategory);
     insertStmt.finalize();
-    var sql= ("SELECT * FROM userVotes");
+    let sql= ("SELECT * FROM userVotes");
     db.all(sql, [], (err, rows) => {
       if (err) {
         throw err;
@@ -194,7 +208,7 @@ function updateWheel (user, message, target){
 }
 
 function printWheel(target){
-  const categories= { "Variation":{
+  const categories= { "letiation":{
                         "enemizer": {"count": 0, "users": null},
                         "boss shuffle": {"count": 0, "users": null},
                         "retro": {"count": 0, "users": null},
@@ -220,15 +234,15 @@ function printWheel(target){
                         "hard": {"count": 0, "users": null} 
                       }
                     }
-  var message= "Current Votes: "
-  var sql= ("SELECT categoryName, count(categoryName) as counts, group_concat(userName) as users FROM userVotes group by categoryName order by categoryName");
-  var response= new Promise((resolve, reject) => {
+  let message= "Current Votes: "
+  let sql= ("SELECT categoryName, count(categoryName) as counts, group_concat(userName) as users FROM userVotes group by categoryName order by categoryName");
+  let response= new Promise((resolve, reject) => {
     db.all(sql, [], (err, rows) => {
       if (err) {
         throw err;
       }
       else{
-        var finalString="";
+        let finalString="";
         rows.forEach((row) => {
         categories[row.categoryName]=row.counts;
         categories[row.categoryName]=row.users;
@@ -249,7 +263,7 @@ function printWheel(target){
 }
 
 function clearWheel(targetCategory){
-  var deleteStmt= db.prepare ("DELETE FROM userVotes WHERE categoryName like ?");
+  let deleteStmt= db.prepare ("DELETE FROM userVotes WHERE categoryName like ?");
   deleteStmt.run("%"+targetCategory+"%");
   deleteStmt.finalize();
 }

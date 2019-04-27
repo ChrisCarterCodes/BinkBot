@@ -1,7 +1,0 @@
-{
-    "Bot": {
-        "username": "kyoudai_bot",
-        "password": "oauth:blahblahblahimanoauthtokenlookatme",
-        "channels": ["kyoudai_shojin"]
-    }
-}
