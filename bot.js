@@ -5,6 +5,7 @@ const tmi = require('tmi.js');
 const config = require('./config/config');
 const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.cached.Database('weights');
+const SQL = require('./config/sql');
 
 console.log(config);
 
@@ -16,7 +17,7 @@ const categories= [ "enemizer", "boss shuffle", "retro", "keysanity", "inverted"
 
 //Define base db tables
 db.serialize(function() {
-  db.run("CREATE TABLE IF NOT EXISTS userVotes (userName TEXT , categoryName TEXT )");
+  db.run(SQL.createUserVotesTable);
 });
 // Define configuration options
 const opts = {
@@ -192,10 +193,10 @@ function updateWheel (user, message, target){
   }
   else{
     console.log(votedCategory);
-    let insertStmt= db.prepare("INSERT OR REPLACE INTO userVotes VALUES (? , ?) ");
+    let insertStmt= db.prepare(SQL.insertUserVote);
     insertStmt.run(user, votedCategory);
     insertStmt.finalize();
-    let sql= ("SELECT * FROM userVotes");
+    let sql= SQL.allUserVotes;
     db.all(sql, [], (err, rows) => {
       if (err) {
         throw err;
@@ -235,7 +236,7 @@ function printWheel(target){
                       }
                     }
   let message= "Current Votes: "
-  let sql= ("SELECT categoryName, count(categoryName) as counts, group_concat(userName) as users FROM userVotes group by categoryName order by categoryName");
+  let sql= SQL.categoryCounts;
   let response= new Promise((resolve, reject) => {
     db.all(sql, [], (err, rows) => {
       if (err) {
@@ -263,7 +264,7 @@ function printWheel(target){
 }
 
 function clearWheel(targetCategory){
-  let deleteStmt= db.prepare ("DELETE FROM userVotes WHERE categoryName like ?");
+  let deleteStmt= db.prepare (SQL.deleteUserVotes);
   deleteStmt.run("%"+targetCategory+"%");
   deleteStmt.finalize();
 }
