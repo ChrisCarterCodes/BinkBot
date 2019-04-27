@@ -1,7 +1,0 @@
-{
-    "Bot": {
-        "username": "<bot username>",
-        "password": "<oath token here>",
-        "channels": ["<channel bot should join>"]
-    }
-}
