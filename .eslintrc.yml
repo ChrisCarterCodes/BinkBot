@@ -40,7 +40,7 @@ rules:
     - never
   consistent-return: 'off'
   consistent-this: error
-  curly: error
+  curly: 0
   default-case: error
   dot-location: error
   dot-notation: 'off'
@@ -101,6 +101,7 @@ rules:
   no-catch-shadow: error
   no-confusing-arrow: error
   no-continue: error
+  no-console: warn
   no-div-regex: error
   no-duplicate-imports: error
   no-else-return: error
