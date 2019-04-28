@@ -138,7 +138,8 @@ function onMessageHandler (target, context, msg, self, data) {
 
   if(cmd[0] !== '!') return // we don't have a command, don't process
 
-  log.debug('Parsing command: %s', cmd);
+  log.verbose('Parsing command: %s', cmd);
+  log.debug('Full command parts: %s', commandParts);
   switch (cmd) {
     case '!bet':
       log.debug('processing !bet command')
