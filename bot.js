@@ -171,7 +171,7 @@ function onSubResubHandler (channel, username, months, message, userstate, metho
 
 function onJoinHandler(channel, username, self) {
   console.log('Bot joined channel: %s %s %s', channel, username, self);
-  client.say(channel, 'Kyuobot is online!');
+  //client.say(channel, 'Kyuobot is online!');
 }
 
 // Called every time the bot connects to Twitch chat
