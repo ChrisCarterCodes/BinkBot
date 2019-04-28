@@ -339,6 +339,7 @@ http.createServer(function (req, res) {
 }).listen(process.env.PORT || 8080);
 
 // keep alive function
-setInterval(function() {
-    http.get(`localhost:${process.env.PORT}`);
+http.get(`http://127.0.0.1:${process.env.PORT || 8080}`); //test
+setInterval(function() { 
+    http.get(`http://127.0.0.1:${process.env.PORT || 8080}`);
 }, 100000);
