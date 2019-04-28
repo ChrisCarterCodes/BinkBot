@@ -95,5 +95,7 @@ if [[ $confirm == 'y' ]]; then
 	echo "Running Docker image"
 	$BASEDIR/docker/scripts/unix/run.sh -e TWITCH_USERNAME=$USERNAME \
 		-e TWITCH_OAUTH_TOKEN=$OAUTH_TOKEN \
-		-e TWITCH_TARGET_CHANNELS=$CHANNELS_TO_JOIN
+		-e TWITCH_TARGET_CHANNELS=$CHANNELS_TO_JOIN \
+		-e LOG_LEVEL='debug' \
+		-e LOG_IS_LOCAL=true
 fi

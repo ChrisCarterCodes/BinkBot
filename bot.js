@@ -8,7 +8,7 @@ const db = new sqlite3.cached.Database('weights');
 const SQL = require('./config/sql');
 const log = require('./lib/util/Logger');
 
-log.debug(config);
+log.debug(JSON.stringify(config));
 
 const categories= [ "enemizer", "boss shuffle", "retro", "keysanity", "inverted", "basic",
                       "standard", "open",
@@ -32,7 +32,7 @@ const opts = {
   channels: config.Bot.channels
 };
 
-log.debug(opts);
+log.debug(JSON.stringify(opts));
 
 // Create a client with our options
 const client = new tmi.client(opts);
@@ -52,7 +52,7 @@ client.on('error', onErrorHandler);
 client.connect();
 
 // process end event listener
-function killHandler(e){
+function killHandler(){
   log.info('killing connections');
   client.disconnect();
   log.info('exiting');
@@ -63,7 +63,7 @@ process.on('SIGINT', killHandler);
 process.on('SIGTERM', killHandler);
 
 function gtBets(context, target, action, modFlag){
-  log.debug('gtBets called: %s %s %s %s', context, target, action, modFlag)
+  log.debug('gtBets called: %s %s %s %s', JSON.stringify(context), target, action, modFlag)
   const user=context.username;
     if(action == 'open' && !gtBetMode && modFlag){
       //enable bets
@@ -94,8 +94,10 @@ function gtBets(context, target, action, modFlag){
 }
 
 function gtWinner(target, context, action){
+  log.debug('gtWinner called: %s %s %s', target, JSON.stringify(context), action)
   log.debug(winners);
   if (winners.length>0){
+      log.warn('winners were already determined: %s ', winners.join(" , "));
       client.say(target, `The winners have already been determined, they were ${winners.join(" , ")}`);
       return;
   }
@@ -106,9 +108,11 @@ function gtWinner(target, context, action){
       }
       if(winners.length == 0){winners=['no one :c']}
       client.say(target, `The winning chest was ${action}! Congratulations to ${winners.join(" , ")}`);
+      log.verbose('winning chest: %s. Winner: %s', action, winners.join(" , "))
     }
     else{
       client.say(target, `There's 22 checks in GT, buddy.`);
+      log.warn('action exceeded 22')
     }
   }
 }
@@ -129,13 +133,15 @@ function onMessageHandler (target, context, msg, self, data) {
   // determine permission level
   const modFlag=isMod(context);
 
-  let outputText = '' // initialize in case we use
-  const cmd = commandParts[0].toLowerCase()
+  let outputText = ''; // initialize in case we use
+  const cmd = commandParts[0].toLowerCase();
 
   if(cmd[0] !== '!') return // we don't have a command, don't process
 
+  log.debug('Parsing command: %s', cmd);
   switch (cmd) {
     case '!bet':
+      log.debug('processing !bet command')
       if (commandParts.length > 1) {
         gtBets(context, target, commandParts[1], modFlag);
       }
@@ -144,27 +150,33 @@ function onMessageHandler (target, context, msg, self, data) {
       }
       break;
     case '!betwinner':
+      log.debug('processing !betwinner command')
       if (commandParts.length > 1 && modFlag) {
         gtWinner(target, context, commandParts[1]);
       }
       break;
     case '!betstatus':
+      log.debug('processing !betstatus command')
       outputText = JSON.stringify(bets, null, 1);
       outputText = outputText.replace(/("{|}")/gi, '"');
       client.say(target, `Current bets: ${outputText}`);
       break;
     case '!wheeladd':
+      log.debug('processing !wheeladd command')
       if (commandParts.length > 2 && isMod) {
         updateWheel(commandParts[1], msg, target);
       }
       break;
     case '!wheeloptions':
+      log.debug('processing !wheeloptions command')
       client.say(target, `Valid categories: ${categories.join(" , ")}`);
       break;
     case '!wheelvotes':
+      log.debug('processing !wheelvotes command')
       printWheel(target);
       break;
     case '!wheelclear':
+      log.debug('processing !wheelclear command')
       if (commandParts.length > 1 && isMod) {
         clearWheel(commandParts[1]);
       }
@@ -199,6 +211,7 @@ function onErrorHandler(e){
 }
 
 function updateWheel (user, message, target){
+  log.debug('updateWheel called: %s %s %s', user, message, target)
   if(!message){return;}
   message= message.toLowerCase();
   
@@ -235,6 +248,7 @@ function updateWheel (user, message, target){
 }
 
 function printWheel(target){
+  log.debug('printWheel called: %s', target)
   const categories= { "Variation":{
                         "enemizer": {"count": 0, "users": null},
                         "boss shuffle": {"count": 0, "users": null},
@@ -290,12 +304,14 @@ function printWheel(target){
 }
 
 function clearWheel(targetCategory){
+  log.debug('clearWheel called: %s', targetCategory)
   const deleteStmt= db.prepare (SQL.deleteUserVotes);
   deleteStmt.run("%"+targetCategory+"%");
   deleteStmt.finalize();
 }
 
 function isMod(context){
+  log.debug('isMod called: %s', JSON.stringift(context))
   if(context['badges']){
     if(context['user-type'] == "mod" || !context['badges']['broadcaster'] === null){
       return true;
@@ -304,6 +320,7 @@ function isMod(context){
 }
 
 function isSub(context){
+  log.debug('isSub called: %s', JSON.stringify(context))
   if(context['badges']){
     if(context['badges']['subscriber'] ){
       return true;
@@ -315,6 +332,7 @@ function isSub(context){
 // healthcheck ping
 var http = require('http');
 http.createServer(function (req, res) {
+  log.debug('healthcheck server pinged')
   res.writeHead(200, {'Content-Type': 'text/plain'});
   res.write('Hello World!');
   res.end();
