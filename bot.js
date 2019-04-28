@@ -119,10 +119,12 @@ function gtWinner(target, context, action){
 
 // Called every time a message comes in
 function onMessageHandler (target, context, msg, self, data) {
-  log.verbose('Message received: %s %s', msg, target);
+
+  if (self) { log.debug('ignoring message from self'); return; } // Ignore messages from the bot
+
+  const username = context['display-name'];
+  log.verbose('Message received: %s[%s]: %s', username, target, msg);
   log.debug('Message metadata: isSelf %s, context: %s, data: %s', self, JSON.stringify(context), JSON.stringify(data));
-  
-  if (self) { return; } // Ignore messages from the bot
 
   // Remove whitespace from chat message
   const commandName = msg.trim();
