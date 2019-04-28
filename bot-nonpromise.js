@@ -292,7 +292,7 @@ function isSub(context){
 }
 
 function incrementUserVotes(user){
-  var addWheelWeightStmt= db.run("INSERT INTO userInfo(userName, availableWheelVotes) VALUES (?, 1)  ON CONFLICT(userName) DO UPDATE SET availableWheelVotes=availableWheelVotes+1;", user);
+  var addWheelWeightStmt= db.prepare("INSERT INTO userInfo(userName, availableWheelVotes) VALUES (?, 1)  ON CONFLICT(userName) DO UPDATE SET availableWheelVotes=availableWheelVotes+1;");
     addWheelWeightStmt.run(user);
     addWheelWeightStmt.finalize();
     var sql= ("SELECT * FROM userInfo");
