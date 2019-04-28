@@ -1,16 +1,21 @@
+const path = require('path');
+require('dotenv').config({path: path.join(__dirname, '.env')});
+
 const tmi = require('tmi.js');
-const config = require('config');
+
+const config = require('./config/config');
 const sqlite = require('sqlite');
 const dbPromise = sqlite.open('weights', { Promise });
+const SQL = require('./config/sql');
 console.log(typeof dbPromise);
 const db = initialize();
 async function initialize(){
   try{
   let db = await dbPromise;
   console.log(` db: ${db}`);
-  db.run("CREATE TABLE IF NOT EXISTS userVotes (userName TEXT , categoryName TEXT )");
+  db.run(SQL.createUserVotesTable);
   //db.run("drop table userinfo");
-  db.run("CREATE TABLE IF NOT EXISTS userInfo (userName TEXT PRIMARY KEY , availableWheelVotes INT DEFAULT 0 )");
+  db.run(SQL.createUserInfoTable);
   return db
 }
   catch (err) {
@@ -32,35 +37,39 @@ const categories= [ "enemizer", "boss shuffle", "retro", "keysanity", "inverted"
   //db.run("drop table userinfo");
   db.run("CREATE TABLE IF NOT EXISTS userInfo (userName TEXT PRIMARY KEY , availableWheelVotes INT DEFAULT 0 )");
 }); */
+
 // Define configuration options
 const opts = {
   connection: {
     reconnect: true // This
   },
   identity: {
-    username: config.get('Bot.username'),
-    password: config.get('Bot.password')
+    username: process.env.TWITCH_USERNAME,
+    password: process.env.TWITCH_OAUTH_TOKEN
   },
-  channels: config.get('Bot.channels')
+  channels: [process.env.TWITCH_TARGET_CHANNELS]
 };
+console.log(opts);
 
 // Create a client with our options
 const client = new tmi.client(opts);
-var gtBetMode= false;
-var bets= {};
-var winners=[];
+let gtBetMode= false;
+let bets= {};
+let winners=[];
 
 // Register our event handlers (defined below)
 client.on('message', onMessageHandler);
 client.on('connected', onConnectedHandler);
 client.on('subscription', onSubHandler);
-client.on('resub', onSubResubHandler)
+client.on('resub', onSubResubHandler);
+client.on('join', onJoinHandler);
+client.on('error', onErrorHandler);
 
 // Connect to Twitch:
 client.connect();
 
 function gtBets(context, target, action, modFlag){
-  var user=context.username;
+  const user=context.username;
     if(action == 'open' && !gtBetMode && modFlag){
       //enable bets
       gtBetMode=true;
@@ -115,6 +124,7 @@ function onMessageHandler (target, context, msg, self, data) {
   console.log(self);
   console.log(context);
   console.log(data);
+
   if (self) { return; } // Ignore messages from the bot
 
   // Remove whitespace from chat message
@@ -122,41 +132,51 @@ function onMessageHandler (target, context, msg, self, data) {
   const commandParts= commandName.split(" ");
 
   // determine permission level
-  var modFlag=isMod(context);
+  const modFlag=isMod(context);
 
-  if(commandParts[0].toLowerCase() == '!bet'  ){
-    if(commandParts.length > 1){
-      gtBets(context, target, commandParts[1], modFlag);
-    }
-    else{
-      //client.say(target, `Place your bets on GT! Just enter '!bet <number>' to bet!`);
-    }
-  }
-  if(commandParts[0].toLowerCase() == '!betwinner'  ){
-    if(commandParts.length > 1 && modFlag){
-      gtWinner(target, context, commandParts[1]);
-    }
-  }
-  if(commandParts[0].toLowerCase() == '!betstatus'  ){
-    var outputText=JSON.stringify(bets, null, 1);
-    outputText=outputText.replace(/("{|}")/gi,'"');
-    //client.say(target, `Current bets: ${outputText}`);
-  }
-  if(commandParts[0].toLowerCase() == '!wheeladd'  ){
-    if(commandParts.length > 1){
-      updateWheel(context['username'], msg, target);
-    }
-  }
-  if(commandParts[0].toLowerCase() == '!wheeloptions'  ){
-    //client.say(target, `Valid categories: ${categories.join(" , ")}`);
-  }
-  if(commandParts[0].toLowerCase() == '!wheelvotes'  ){
-    printWheel(target);
-  }
-  if(commandParts[0].toLowerCase() == '!wheelclear'  ){
-    if(commandParts.length >1 && isMod){
-      clearWheel(commandParts[1]);
-    }
+  let outputText = '' // initialize in case we use
+  const cmd = commandParts[0].toLowerCase()
+
+  if(cmd[0] !== '!') return // we don't have a command, don't process
+
+  switch (cmd) {
+    case '!bet':
+      if (commandParts.length > 1) {
+        gtBets(context, target, commandParts[1], modFlag);
+      }
+      else {
+        client.say(target, `Place your bets on GT! Just enter '!bet <number>' to bet!`);
+      }
+      break;
+    case '!betwinner':
+      if (commandParts.length > 1 && modFlag) {
+        gtWinner(target, context, commandParts[1]);
+      }
+      break;
+    case '!betstatus':
+      outputText = JSON.stringify(bets, null, 1);
+      outputText = outputText.replace(/("{|}")/gi, '"');
+      client.say(target, `Current bets: ${outputText}`);
+      break;
+    case '!wheeladd':
+      if(commandParts.length > 1){
+        updateWheel(context['username'], msg, target);
+      }
+      break;
+    case '!wheeloptions':
+      client.say(target, `Valid categories: ${categories.join(" , ")}`);
+      break;
+    case '!wheelvotes':
+      printWheel(target);
+      break;
+    case '!wheelclear':
+      if (commandParts.length > 1 && isMod) {
+        clearWheel(commandParts[1]);
+      }
+      break;
+    default:
+      console.warn('unknown command: %s', cmd)
+      break;
   }
   if(commandParts[0].toLowerCase() == '!adduservote'  ){
     if(commandParts.length >1 && isMod){
@@ -173,10 +193,19 @@ function onSubResubHandler (channel, username, months, message, userstate, metho
   updateWheel(username, message, channel);
 }
 
+function onJoinHandler(channel, username, self) {
+  console.log('Bot joined channel: %s %s %s', channel, username, self);
+  //client.say(channel, 'Kyuobot is online!');
+}
 
 // Called every time the bot connects to Twitch chat
 function onConnectedHandler (addr, port) {
   console.log(`* Connected to ${addr}:${port}`);
+}
+
+function onErrorHandler(e){
+  console.error(e)
+  throw new Error('CRITICAL ERROR: ' + e.message);
 }
 
 function updateWheel (user, message, target){
@@ -186,9 +215,9 @@ function updateWheel (user, message, target){
   }
   message= message.toLowerCase();
   
-  var length= categories.length;
-  var votedCategory= "Invalid";
-  var i;
+  const length= categories.length;
+  let votedCategory= "Invalid";
+  let i
   for( i=0; i < length; i++){
     if (message.indexOf(categories[i])!=-1) {
       console.log(`Got one: ${categories[i]}`);
@@ -205,7 +234,7 @@ function updateWheel (user, message, target){
       //client.say(target, `You didn't request a variation to put weight into! Type !wheel for more info.`);
       return;
     }
-    incrementUserVotes(user);
+    incrementUserVotes(user, target);
   }
   else{
     console.log(votedCategory);
@@ -214,44 +243,15 @@ function updateWheel (user, message, target){
 }
 
 function printWheel(target){
-  const categories= { "Variation":{
-                        "enemizer": {"count": 0, "users": null},
-                        "boss shuffle": {"count": 0, "users": null},
-                        "retro": {"count": 0, "users": null},
-                        "keysanity": {"count": 0, "users": null},
-                        "inverted": {"count": 0, "users": null},
-                        "basic": {"count": 0, "users": null}
-                      },
-                      "State":{
-                        "standard": {"count": 0, "users": null},
-                        "open": {"count": 0, "users": null}
-                      },
-                      "Goal":{
-                        "kill pig": {"count": 0, "users": null},
-                        "all dungeons": {"count": 0, "users": null}
-                      },
-                      "Uncle":{ 
-                        "assured": {"count": 0, "users": null},
-                        "random weapon": {"count": 0, "users": null},
-                        "swordless": {"count": 0, "users": null}
-                      },
-                      "Difficulty":{
-                        "normal": {"count": 0, "users": null},
-                        "hard": {"count": 0, "users": null} 
-                      }
-                    }
-  var message= "Current Votes: "
-  var sql= ("SELECT categoryName, count(categoryName) as counts, group_concat(userName) as users FROM userVotes group by categoryName order by categoryName");
-  var response= new Promise((resolve, reject) => {
-    db.all(sql, [], (err, rows) => {
+  const sql= SQL.categoryCounts;
+  const response= new Promise((resolve, reject) => {
+    db.all(sql, target, (err, rows) => {
       if (err) {
         throw err;
       }
       else{
-        var finalString="";
+        let finalString="";
         rows.forEach((row) => {
-        categories[row.categoryName]=row.counts;
-        categories[row.categoryName]=row.users;
         finalString += `${row.categoryName} : ${row.counts} (${row.users})      `;
         });
         resolve(finalString);
@@ -260,16 +260,16 @@ function printWheel(target){
   });
   response.then((value) =>{
     if(value){
-      //client.say(target, `${value}`);
+      client.say(target, `Current votes: ${value}`);
     }
     else{
-      //client.say(target, "No votes!");
+      client.say(target, "No votes!");
     }
   });
 }
 
 function clearWheel(targetCategory){
-  var deleteStmt= db.prepare ("DELETE FROM userVotes WHERE categoryName like ?");
+  let deleteStmt= db.prepare (SQL.deleteUserVotes);
   deleteStmt.run("%"+targetCategory+"%");
   deleteStmt.finalize();
 }
@@ -291,11 +291,11 @@ function isSub(context){
   }
 }
 
-function incrementUserVotes(user){
-  var addWheelWeightStmt= db.run("INSERT INTO userInfo(userName, availableWheelVotes) VALUES (?, 1)  ON CONFLICT(userName) DO UPDATE SET availableWheelVotes=availableWheelVotes+1;", user);
+function incrementUserVotes(user, channel){
+  var addWheelWeightStmt= db.run(SQL.incrementUserVote, user);
     addWheelWeightStmt.run(user);
     addWheelWeightStmt.finalize();
-    var sql= ("SELECT * FROM userInfo");
+    var sql= (SQL.getUserInfo);
     db.all(sql, [], (err, rows) => {
       if (err) {
         throw err;
@@ -306,11 +306,11 @@ function incrementUserVotes(user){
     });
 }
 
-function decrementUserVotes(user){
-  var addWheelWeightStmt= db.prepare("INSERT INTO userInfo(userName, availableWheelVotes) VALUES (?, 0)  ON CONFLICT(userName) DO UPDATE SET availableWheelVotes=availableWheelVotes-1;");
+function decrementUserVotes(user, channel){
+  var addWheelWeightStmt= db.prepare(SQL.decrementUserVote);
     addWheelWeightStmt.run(user);
     addWheelWeightStmt.finalize();
-    var sql= ("SELECT * FROM userInfo");
+    var sql= (SQL.getUserInfo);
     db.all(sql, [], (err, rows) => {
       if (err) {
         throw err;
@@ -322,10 +322,10 @@ function decrementUserVotes(user){
 }
 
 function addVote(user, votedCategory){
-  var insertStmt= db.prepare("INSERT OR REPLACE INTO userVotes VALUES (? , ?) ");
+  var insertStmt= db.prepare(SQL.addVote);
     insertStmt.run(user, votedCategory);
     insertStmt.finalize();
-    var sql= ("SELECT * FROM userVotes");
+    var sql= (SQL.getVotes);
     db.all(sql, [], (err, rows) => {
       if (err) {
         throw err;
@@ -337,7 +337,7 @@ function addVote(user, votedCategory){
 }
 
 async function getVoteCount(user){
-  var insertStmt= db.prepare("SELECT availableWheelVotes as count from userInfo where userName=? ");
+  var insertStmt= db.prepare(SQL.getVoteCount);
   var voteCount=0;
   let promise= new Promise(function(resolve, reject){
     insertStmt.get([user],  (err, row) =>{
