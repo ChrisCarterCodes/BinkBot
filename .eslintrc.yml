@@ -77,7 +77,7 @@ rules:
   max-classes-per-file: error
   max-depth: error
   max-len: 'off'
-  max-lines: error
+  max-lines: warn
   max-lines-per-function: 'off'
   max-nested-callbacks: error
   max-params: 'off'
@@ -170,7 +170,7 @@ rules:
   no-sync: error
   no-tabs: error
   no-template-curly-in-string: error
-  no-ternary: error
+  no-ternary: 0
   no-throw-literal: error
   no-trailing-spaces: 'off'
   no-undef-init: error

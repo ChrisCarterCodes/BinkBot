@@ -6,8 +6,9 @@ const config = require('./config/config');
 const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.cached.Database('weights');
 const SQL = require('./config/sql');
+const log = require('./lib/util/Logger');
 
-console.log(config);
+log.debug(config);
 
 const categories= [ "enemizer", "boss shuffle", "retro", "keysanity", "inverted", "basic",
                       "standard", "open",
@@ -30,7 +31,8 @@ const opts = {
   },
   channels: [process.env.TWITCH_TARGET_CHANNELS]
 };
-console.log(opts);
+
+log.debug(opts);
 
 // Create a client with our options
 const client = new tmi.client(opts);
@@ -50,6 +52,7 @@ client.on('error', onErrorHandler);
 client.connect();
 
 function gtBets(context, target, action, modFlag){
+  log.debug('gtBets called: %s %s %s %s', context, target, action, modFlag)
   const user=context.username;
     if(action == 'open' && !gtBetMode && modFlag){
       //enable bets
@@ -76,11 +79,11 @@ function gtBets(context, target, action, modFlag){
         client.say(target, `There's 22 checks in GT, buddy.`);
       }
     }
-    console.log(bets);
+    log.debug(bets);
 }
 
 function gtWinner(target, context, action){
-  console.log(winners);
+  log.debug(winners);
   if (winners.length>0){
       client.say(target, `The winners have already been determined, they were ${winners.join(" , ")}`);
       return;
@@ -101,10 +104,10 @@ function gtWinner(target, context, action){
 
 // Called every time a message comes in
 function onMessageHandler (target, context, msg, self, data) {
-  console.log(msg);
-  console.log(self);
-  console.log(context);
-  console.log(data); 
+  log.debug(msg);
+  log.debug(self);
+  log.debug(context);
+  log.debug(data); 
   
   if (self) { return; } // Ignore messages from the bot
 
@@ -156,7 +159,7 @@ function onMessageHandler (target, context, msg, self, data) {
       }
       break;
     default:
-      console.warn('unknown command: %s', cmd)
+      log.warn('unknown command: %s', cmd)
       break;
   }
 }
@@ -170,17 +173,17 @@ function onSubResubHandler (channel, username, months, message, userstate, metho
 }
 
 function onJoinHandler(channel, username, self) {
-  console.log('Bot joined channel: %s %s %s', channel, username, self);
+  log.info('Bot joined channel: %s %s %s', channel, username, self);
   //client.say(channel, 'Kyuobot is online!');
 }
 
 // Called every time the bot connects to Twitch chat
 function onConnectedHandler (addr, port) {
-  console.log(`* Connected to ${addr}:${port}`);
+  log.info(`* Connected to ${addr}:${port}`);
 }
 
 function onErrorHandler(e){
-  console.error(e)
+  log.error(e)
   throw new Error('CRITICAL ERROR: ' + e.message);
 }
 
@@ -193,7 +196,7 @@ function updateWheel (user, message, target){
   let i
   for( i=0; i < length; i++){
     if (message.indexOf(categories[i])!=-1) {
-      console.log(`Got one: ${categories[i]}`);
+      log.debug(`Got one: ${categories[i]}`);
       votedCategory= categories[i];
       break;
     }
@@ -204,7 +207,7 @@ function updateWheel (user, message, target){
     }
   }
   else{
-    console.log(votedCategory);
+    log.debug(votedCategory);
     const insertStmt= db.prepare(SQL.insertUserVote);
     insertStmt.run(user, votedCategory);
     insertStmt.finalize();
@@ -214,7 +217,7 @@ function updateWheel (user, message, target){
         throw err;
       }
       rows.forEach((row) => {
-        console.log(row.categoryName+" : "+row.userName);
+        log.debug(row.categoryName+" : "+row.userName);
       });
     });
   }
@@ -276,7 +279,7 @@ function printWheel(target){
 }
 
 function clearWheel(targetCategory){
-  let deleteStmt= db.prepare (SQL.deleteUserVotes);
+  const deleteStmt= db.prepare (SQL.deleteUserVotes);
   deleteStmt.run("%"+targetCategory+"%");
   deleteStmt.finalize();
 }
@@ -298,3 +301,10 @@ function isSub(context){
   }
 }
 
+// healthcheck ping
+var http = require('http');
+http.createServer(function (req, res) {
+  res.writeHead(200, {'Content-Type': 'text/plain'});
+  res.write('Hello World!');
+  res.end();
+}).listen(process.env.PORT || 8080);
