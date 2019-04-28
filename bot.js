@@ -2,6 +2,7 @@ const path = require('path');
 require('dotenv').config({path: path.join(__dirname, '.env')});
 
 const tmi = require('tmi.js');
+const TmiContext= require('./tmicontext.js');
 
 const config = require('./config/config');
 const sqlite = require('sqlite');
@@ -23,7 +24,6 @@ async function initialize(){
   }
 }
 
-console.log(config);
 
 const categories= [ "enemizer", "boss shuffle", "retro", "keysanity", "inverted", "basic",
                       "standard", "open",
@@ -69,6 +69,7 @@ client.on('error', onErrorHandler);
 client.connect();
 
 function gtBets(context, target, action, modFlag){
+  console.log(action, modFlag)
   const user=context.username;
     if(action == 'open' && !gtBetMode && modFlag){
       //enable bets
@@ -77,22 +78,22 @@ function gtBets(context, target, action, modFlag){
       bets={};
       //reset the last winners
       winners=[];
-      //client.say(target, `Get your bets in! type '!bet <number>' to place your bets for the GT chest!`);
+      client.say(target, `Get your bets in! type '!bet <number>' to place your bets for the GT chest!`);
     }
     else if(action == 'close' && gtBetMode && modFlag){ 
       gtBetMode=false;
-      //client.say(target, `Bets are closed! Best of luck everyone!`);
+      client.say(target, `Bets are closed! Best of luck everyone!`);
     }
     else if(!isNaN(action)){
       if (!gtBetMode){
-        //client.say(target, `You either missed the betting, or we're not headed to GT. Or you're bored.`);
+        client.say(target, `You either missed the betting, or we're not headed to GT. Or you're bored.`);
         return;
       }
       if(action <=22 && action>=1){
         bets[user] = action;
       }
       else{
-        //client.say(target, `There's 22 checks in GT, buddy.`);
+        client.say(target, `There's 22 checks in GT, buddy.`);
       }
     }
     console.log(bets);
@@ -101,7 +102,7 @@ function gtBets(context, target, action, modFlag){
 function gtWinner(target, context, action){
   console.log(winners);
   if (winners.length>0){
-      //client.say(target, `The winners have already been determined, they were ${winners.join(" , ")}`);
+      client.say(target, `The winners have already been determined, they were ${winners.join(" , ")}`);
       return;
   }
   if(!gtBetMode){
@@ -110,10 +111,10 @@ function gtWinner(target, context, action){
         if (bets[user] == action){winners.push(user); incrementUserVotes(user);}
       }
       if(winners.length == 0){winners=['no one :c']}
-      //client.say(target, `The winning chest was ${action}! Congratulations to ${winners.join(" , ")}`);
+      client.say(target, `The winning chest was ${action}! Congratulations to ${winners.join(" , ")}`);
     }
     else{
-      //client.say(target, `There's 22 checks in GT, buddy.`);
+      client.say(target, `There's 22 checks in GT, buddy.`);
     }
   }
 }
@@ -131,8 +132,8 @@ function onMessageHandler (target, context, msg, self, data) {
   const commandName = msg.trim();
   const commandParts= commandName.split(" ");
 
-  // determine permission level
-  const modFlag=isMod(context);
+  let tmiContext= TmiContext.parse(context);
+  console.log(tmiContext.isMod);
 
   let outputText = '' // initialize in case we use
   const cmd = commandParts[0].toLowerCase()
@@ -142,14 +143,14 @@ function onMessageHandler (target, context, msg, self, data) {
   switch (cmd) {
     case '!bet':
       if (commandParts.length > 1) {
-        gtBets(context, target, commandParts[1], modFlag);
+        gtBets(context, target, commandParts[1], tmiContext.isMod);
       }
       else {
         client.say(target, `Place your bets on GT! Just enter '!bet <number>' to bet!`);
       }
       break;
     case '!betwinner':
-      if (commandParts.length > 1 && modFlag) {
+      if (commandParts.length > 1 && tmiContext.isMod) {
         gtWinner(target, context, commandParts[1]);
       }
       break;
@@ -194,8 +195,9 @@ function onSubResubHandler (channel, username, months, message, userstate, metho
 }
 
 function onJoinHandler(channel, username, self) {
-  console.log('Bot joined channel: %s %s %s', channel, username, self);
-  //client.say(channel, 'Kyuobot is online!');
+  if(self){
+    console.log('Bot joined channel: %s %s %s', channel, username, self);
+  }
 }
 
 // Called every time the bot connects to Twitch chat
@@ -231,7 +233,7 @@ function updateWheel (user, message, target){
   }
   if(votedCategory == "Invalid"){
     if(message.includes('!wheeladd')){
-      //client.say(target, `You didn't request a variation to put weight into! Type !wheel for more info.`);
+      client.say(target, `You didn't request a variation to put weight into! Type !wheel for more info.`);
       return;
     }
     incrementUserVotes(user, target);
@@ -274,22 +276,7 @@ function clearWheel(targetCategory){
   deleteStmt.finalize();
 }
 
-function isMod(context){
-  if(context['badges']){
-    if(context['user-type'] == "mod" || context['badges']['broadcaster'] ){
-      return true;
-    }
-  }
-}
 
-function isSub(context){
-  if(context['badges']){
-    if(context['badges']['subscriber'] ){
-      return true;
-    }
-    return true;
-  }
-}
 
 function incrementUserVotes(user, channel){
   var addWheelWeightStmt= db.run(SQL.incrementUserVote, user);
