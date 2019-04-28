@@ -38,6 +38,14 @@ function promptCredentials(){
 		echo 'add another channel? (type "done" to finish)'
 		read CHANNEL_INPUT
 	done
+
+	echo 'do you wish to write these values to a local config file? (y/n)'
+	read confirm
+
+	if [[ $confirm == 'y' ]]; then
+		echo "writing input to .env file"
+		writeEnvFile $USERNAME $OAUTH_TOKEN $CHANNELS_TO_JOIN
+	fi
 }
 
 
@@ -71,14 +79,9 @@ if [[ -f $ENV_FILEPATH ]]; then
 		readConfigFile
 	else
 		promptCredentials
-		echo 'do you wish to write these values to a local config file? (y/n)'
-		read confirm
-
-		if [[ $confirm == 'y' ]]; then
-			echo "writing input to .env file"
-			writeEnvFile $USERNAME $OAUTH_TOKEN $CHANNELS_TO_JOIN
-		fi
 	fi
+else
+	promptCredentials
 fi
 
 echo "INPUT:"
