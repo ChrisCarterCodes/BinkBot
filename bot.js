@@ -90,7 +90,7 @@ function gtBets(context, target, action, modFlag){
         client.say(target, `There's 22 checks in GT, buddy.`);
       }
     }
-    log.debug(bets);
+    log.debug(JSON.stringify(bets));
 }
 
 function gtWinner(target, context, action){
