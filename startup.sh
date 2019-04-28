@@ -38,6 +38,14 @@ function promptCredentials(){
 		echo 'add another channel? (type "done" to finish)'
 		read CHANNEL_INPUT
 	done
+
+	echo 'do you wish to write these values to a local config file? (y/n)'
+	read confirm
+
+	if [[ $confirm == 'y' ]]; then
+		echo "writing input to .env file"
+		writeEnvFile $USERNAME $OAUTH_TOKEN $CHANNELS_TO_JOIN
+	fi
 }
 
 
@@ -71,14 +79,9 @@ if [[ -f $ENV_FILEPATH ]]; then
 		readConfigFile
 	else
 		promptCredentials
-		echo 'do you wish to write these values to a local config file? (y/n)'
-		read confirm
-
-		if [[ $confirm == 'y' ]]; then
-			echo "writing input to .env file"
-			writeEnvFile $USERNAME $OAUTH_TOKEN $CHANNELS_TO_JOIN
-		fi
 	fi
+else
+	promptCredentials
 fi
 
 echo "INPUT:"
@@ -95,5 +98,7 @@ if [[ $confirm == 'y' ]]; then
 	echo "Running Docker image"
 	$BASEDIR/docker/scripts/unix/run.sh -e TWITCH_USERNAME=$USERNAME \
 		-e TWITCH_OAUTH_TOKEN=$OAUTH_TOKEN \
-		-e TWITCH_TARGET_CHANNELS=$CHANNELS_TO_JOIN
+		-e TWITCH_TARGET_CHANNELS=$CHANNELS_TO_JOIN \
+		-e LOG_LEVEL='debug' \
+		-e LOG_IS_LOCAL=true
 fi
