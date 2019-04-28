@@ -26,10 +26,10 @@ const opts = {
     reconnect: true // This
   },
   identity: {
-    username: process.env.TWITCH_USERNAME,
-    password: process.env.TWITCH_OAUTH_TOKEN
+    username: config.Bot.username,
+    password: config.Bot.token
   },
-  channels: [process.env.TWITCH_TARGET_CHANNELS]
+  channels: config.Bot.channels
 };
 
 log.debug(opts);
@@ -50,6 +50,17 @@ client.on('error', onErrorHandler);
 
 // Connect to Twitch:
 client.connect();
+
+// process end event listener
+function killHandler(e){
+  log.info('killing connections');
+  client.disconnect();
+  log.info('exiting');
+  process.exit(0);
+}
+
+process.on('SIGINT', killHandler);
+process.on('SIGTERM', killHandler);
 
 function gtBets(context, target, action, modFlag){
   log.debug('gtBets called: %s %s %s %s', context, target, action, modFlag)
