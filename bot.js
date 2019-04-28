@@ -25,11 +25,12 @@ const opts = {
     reconnect: true // This
   },
   identity: {
-    username: config['Bot.username'],
-    password: config['Bot.password'],
+    username: process.env.TWITCH_USERNAME,
+    password: process.env.TWITCH_PASSWORD,
   },
-  channels: config['Bot.channels']
+  channels: [process.env.TWITCH_TARGET_CHANNELS]
 };
+console.log(opts);
 
 // Create a client with our options
 const client = new tmi.client(opts);
