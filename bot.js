@@ -311,7 +311,7 @@ function clearWheel(targetCategory){
 }
 
 function isMod(context){
-  log.debug('isMod called: %s', JSON.stringift(context))
+  log.debug('isMod called: %s', JSON.stringify(context))
   if(context['badges']){
     if(context['user-type'] == "mod" || !context['badges']['broadcaster'] === null){
       return true;
