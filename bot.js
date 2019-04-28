@@ -188,7 +188,7 @@ function updateWheel (user, message, target){
   }
   if(votedCategory == "Invalid"){
     if(message.includes('!wheeladd')){
-      client.say(target, `You didn't request a letiation to put weight into! Type !wheel for more info.`);
+      client.say(target, `You didn't request a variation to put weight into! Type !wheel for more info.`);
     }
   }
   else{
@@ -209,7 +209,7 @@ function updateWheel (user, message, target){
 }
 
 function printWheel(target){
-  const categories= { "letiation":{
+  const categories= { "Variation":{
                         "enemizer": {"count": 0, "users": null},
                         "boss shuffle": {"count": 0, "users": null},
                         "retro": {"count": 0, "users": null},
