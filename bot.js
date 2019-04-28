@@ -41,7 +41,9 @@ let winners=[];
 client.on('message', onMessageHandler);
 client.on('connected', onConnectedHandler);
 client.on('subscription', onSubHandler);
-client.on('resub', onSubResubHandler)
+client.on('resub', onSubResubHandler);
+client.on('join', onJoinHandler);
+client.on('error', onErrorHandler);
 
 // Connect to Twitch:
 client.connect();
@@ -166,10 +168,19 @@ function onSubResubHandler (channel, username, months, message, userstate, metho
   updateWheel(username, message, channel);
 }
 
+function onJoinHandler(channel, username, self) {
+  console.log('Bot joined channel: %s %s %s', channel, username, self);
+  client.say(channel, 'Kyuobot is online!');
+}
 
 // Called every time the bot connects to Twitch chat
 function onConnectedHandler (addr, port) {
   console.log(`* Connected to ${addr}:${port}`);
+}
+
+function onErrorHandler(e){
+  console.error(e)
+  throw new Error('CRITICAL ERROR: ' + e.message);
 }
 
 function updateWheel (user, message, target){
