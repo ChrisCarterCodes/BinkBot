@@ -26,7 +26,7 @@ const opts = {
   },
   identity: {
     username: process.env.TWITCH_USERNAME,
-    password: process.env.TWITCH_PASSWORD,
+    password: process.env.TWITCH_OAUTH_TOKEN
   },
   channels: [process.env.TWITCH_TARGET_CHANNELS]
 };
@@ -42,13 +42,15 @@ let winners=[];
 client.on('message', onMessageHandler);
 client.on('connected', onConnectedHandler);
 client.on('subscription', onSubHandler);
-client.on('resub', onSubResubHandler)
+client.on('resub', onSubResubHandler);
+client.on('join', onJoinHandler);
+client.on('error', onErrorHandler);
 
 // Connect to Twitch:
 client.connect();
 
 function gtBets(context, target, action, modFlag){
-  let user=context.username;
+  const user=context.username;
     if(action == 'open' && !gtBetMode && modFlag){
       //enable bets
       gtBetMode=true;
@@ -85,7 +87,7 @@ function gtWinner(target, context, action){
   }
   if(!gtBetMode){
     if(action <=22 && action>=1){
-      for (user in bets){
+      for (const user in bets){
         if (bets[user] == action){winners.push(user)}
       }
       if(winners.length == 0){winners=['no one :c']}
@@ -111,13 +113,12 @@ function onMessageHandler (target, context, msg, self, data) {
   const commandParts= commandName.split(" ");
 
   // determine permission level
-  let modFlag=isMod(context);
+  const modFlag=isMod(context);
 
   let outputText = '' // initialize in case we use
-  let cmd = commandParts[0].toLowerCase()
+  const cmd = commandParts[0].toLowerCase()
 
-  if(cmd[0] !== '!') 
-    return // we don't have a command, don't process
+  if(cmd[0] !== '!') return // we don't have a command, don't process
 
   switch (cmd) {
     case '!bet':
@@ -168,17 +169,26 @@ function onSubResubHandler (channel, username, months, message, userstate, metho
   updateWheel(username, message, channel);
 }
 
+function onJoinHandler(channel, username, self) {
+  console.log('Bot joined channel: %s %s %s', channel, username, self);
+  //client.say(channel, 'Kyuobot is online!');
+}
 
 // Called every time the bot connects to Twitch chat
 function onConnectedHandler (addr, port) {
   console.log(`* Connected to ${addr}:${port}`);
 }
 
+function onErrorHandler(e){
+  console.error(e)
+  throw new Error('CRITICAL ERROR: ' + e.message);
+}
+
 function updateWheel (user, message, target){
   if(!message){return;}
   message= message.toLowerCase();
   
-  let length= categories.length;
+  const length= categories.length;
   let votedCategory= "Invalid";
   let i
   for( i=0; i < length; i++){
@@ -195,10 +205,10 @@ function updateWheel (user, message, target){
   }
   else{
     console.log(votedCategory);
-    let insertStmt= db.prepare(SQL.insertUserVote);
+    const insertStmt= db.prepare(SQL.insertUserVote);
     insertStmt.run(user, votedCategory);
     insertStmt.finalize();
-    let sql= SQL.allUserVotes;
+    const sql= SQL.allUserVotes;
     db.all(sql, [], (err, rows) => {
       if (err) {
         throw err;
@@ -237,9 +247,9 @@ function printWheel(target){
                         "hard": {"count": 0, "users": null} 
                       }
                     }
-  let message= "Current Votes: "
-  let sql= SQL.categoryCounts;
-  let response= new Promise((resolve, reject) => {
+  const message= "Current Votes: "
+  const sql= SQL.categoryCounts;
+  const response= new Promise((resolve, reject) => {
     db.all(sql, [], (err, rows) => {
       if (err) {
         throw err;
