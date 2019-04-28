@@ -119,10 +119,8 @@ function gtWinner(target, context, action){
 
 // Called every time a message comes in
 function onMessageHandler (target, context, msg, self, data) {
-  log.debug(msg);
-  log.debug(self);
-  log.debug(context);
-  log.debug(data); 
+  log.verbose('Message received: %s %s', msg, target);
+  log.debug('Message metadata: isSelf %s, context: %s, data: %s', self, JSON.stringify(context), JSON.stringify(data));
   
   if (self) { return; } // Ignore messages from the bot
 
