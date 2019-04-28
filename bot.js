@@ -337,3 +337,8 @@ http.createServer(function (req, res) {
   res.write('Hello World!');
   res.end();
 }).listen(process.env.PORT || 8080);
+
+// keep alive function
+setInterval(function() {
+    http.get(`localhost:${process.env.PORT}`);
+}, 100000);
