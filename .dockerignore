@@ -1,6 +1,7 @@
 node_modules/
 docker/
 
+.env
 startup.sh
 startBot.bat
 weights
