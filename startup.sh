@@ -86,10 +86,14 @@ echo USERNAME $USERNAME
 echo OAUTH_TOKEN $OAUTH_TOKEN
 echo CHANNELS_TO_JOIN $CHANNELS_TO_JOIN
 
-echo "Building Docker image"
-$BASEDIR/docker/scripts/unix/build.sh
+echo 'Would you like to run the docker image? (y/n)'
+read confirm
+if [[ $confirm == 'y' ]]; then
+	echo "Building Docker image"
+	$BASEDIR/docker/scripts/unix/build.sh
 
-echo "Running Docker image"
-$BASEDIR/docker/scripts/unix/run.sh -e TWITCH_USERNAME=$USERNAME \
-	-e TWITCH_OAUTH_TOKEN=$OAUTH_TOKEN \
-	-e TWITCH_TARGET_CHANNELS=$CHANNELS_TO_JOIN
+	echo "Running Docker image"
+	$BASEDIR/docker/scripts/unix/run.sh -e TWITCH_USERNAME=$USERNAME \
+		-e TWITCH_OAUTH_TOKEN=$OAUTH_TOKEN \
+		-e TWITCH_TARGET_CHANNELS=$CHANNELS_TO_JOIN
+fi
