@@ -29,9 +29,22 @@ The bot now adds a vote to a user every time a user subs, resubs, or is gifted a
 * !wheeladd <choice> - Users can use a vote to add a weight to the wheel. Doesn't let them if they have no votes.
 * **!wheelclear** <choice> - Removes votes for a category after the wheel picks it.
 * !wheeloptions - Shows valid wheel category options that can be in the wheeladd or sub messages
-* **!adduservote <username> -  Lets mods manually add a single weight vote to a user if they earned one while the bot was offline or through other means.
+* **!adduservote** <username> -  Lets mods manually add a single weight vote to a user if they earned one while the bot was offline or through other means.
 
 All **bold** commands are restricted to moderator/host only commands
+
+The categories are:
+
+* Mode:
+    * "enemizer", "boss shuffle", "retro", "keysanity", "inverted", "basic"
+* Start:
+    * "standard", "open"
+* Goal:
+    * "kill pig", "all dungeons"
+* Uncle's gift:
+    * "assured", "random weapon", "swordless"
+* Difficulty:
+    * "normal", "hard"
 
 ## Setup and Launch
 
