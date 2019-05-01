@@ -13,6 +13,9 @@ let client;
 let gtBetMode = false;
 let bets = {};
 let winners = [];
+const log = require('./lib/util/Logger');
+
+log.debug(JSON.stringify(config));
 
 //initalize the database
 ~async function () {
@@ -32,11 +35,10 @@ let winners = [];
     },
     channels: config.Bot.channels
   };
-  console.log(opts);
+  log.debug(JSON.stringify(opts));
 
   // Create a client with our options
   client = new tmi.client(opts);
-
 
   // Register our event handlers (defined below)
   client.on('message', onMessageHandler);
@@ -53,6 +55,17 @@ let winners = [];
   return true;
 }()
 
+// process end event listener
+function killHandler(){
+  log.info('killing connections');
+  client.disconnect();
+  log.info('exiting');
+  process.exit(0);
+}
+
+process.on('SIGINT', killHandler);
+process.on('SIGTERM', killHandler);
+
 const categories = ["enemizer", "boss shuffle", "retro", "keysanity", "inverted", "basic",
   "standard", "open",
   "kill pig", "all dungeons",
@@ -60,6 +73,7 @@ const categories = ["enemizer", "boss shuffle", "retro", "keysanity", "inverted"
   "normal", "hard"];
 
 function gtBets(context, target, action, modFlag) {
+  log.debug('gtBets called: %s %s %s %s', JSON.stringify(context), target, action, modFlag)
   const user = context.username;
   if (action == 'open' && !gtBetMode && modFlag) {
     //enable bets
@@ -100,9 +114,11 @@ function gtWinner(target, context, action) {
       }
       if (winners.length == 0) { winners = ['no one :c'] }
       client.say(target, `The winning chest was ${action}! Congratulations to ${winners.join(" , ")}`);
+      log.verbose('winning chest: %s. Winner: %s', action, winners.join(" , "))
     }
     else {
       client.say(target, `There's 22 checks in GT, buddy.`);
+      log.warn('action exceeded 22')
     }
   }
 }
@@ -114,7 +130,7 @@ async function onMessageHandler(target, context, msg, self, data) {
   console.log(context);
   console.log(data); */
 
-  if (self) { return; } // Ignore messages from the bot
+  if (self) { log.debug('ignoring message from self'); return; } // Ignore messages from the bot
 
   // Remove whitespace from chat message
   const commandName = msg.trim();
@@ -122,13 +138,19 @@ async function onMessageHandler(target, context, msg, self, data) {
 
   let tmiContext = TmiContext.parse(context);
 
-  let outputText = '' // initialize in case we use
-  const cmd = commandParts[0].toLowerCase()
+  log.verbose('Message received: %s[%s]: %s', tmiContext.username, target, msg);
+  log.debug('Message metadata: isSelf %s, context: %s, data: %s', self, JSON.stringify(context), JSON.stringify(data));
+
+  let outputText = ''; // initialize in case we use
+  const cmd = commandParts[0].toLowerCase();
 
   if (cmd[0] !== '!') return // we don't have a command, don't process
 
+  log.verbose('Parsing command: %s', cmd);
+  log.debug('Full command parts: %s', commandParts);
   switch (cmd) {
     case '!bet':
+      log.debug('processing !bet command')
       if (commandParts.length > 1) {
         gtBets(context, target, commandParts[1], tmiContext.isMod);
       }
@@ -137,24 +159,29 @@ async function onMessageHandler(target, context, msg, self, data) {
       }
       break;
     case '!betwinner':
+      log.debug('processing !betwinner command')
       if (commandParts.length > 1 && tmiContext.isMod) {
         gtWinner(target, context, commandParts[1]);
       }
       break;
     case '!betstatus':
+      log.debug('processing !betstatus command')
       outputText = JSON.stringify(bets, null, 1);
       outputText = outputText.replace(/("{|}")/gi, '"');
       client.say(target, `Current bets: ${outputText}`);
       break;
     case '!wheeladd':
+      log.debug('processing !wheeladd command')
       if (commandParts.length > 1) {
         updateWheel(tmiContext.username, msg, target);
       }
       break;
     case '!wheeloptions':
+      log.debug('processing !wheeloptions command')
       client.say(target, `Valid categories: ${categories.join(" , ")}`);
       break;
     case '!wheelweight':
+      log.debug('processing !wheelweight command')
       printWheel(target);
       break;
     case '!wheelvotes':
@@ -162,6 +189,7 @@ async function onMessageHandler(target, context, msg, self, data) {
       client.say(target, `@${tmiContext.username}, you have ${ votes } vote${votes!=1 ? "s":""} for the wheel.`);
       break;
     case '!wheelclear':
+      log.debug('processing !wheelclear command')
       if (commandParts.length > 1 && tmiContext.isMod) {
         clearWheel(commandParts[1], target);
       }
@@ -172,7 +200,7 @@ async function onMessageHandler(target, context, msg, self, data) {
       }
       break;
     default:
-      console.warn('unknown command: %s', cmd)
+      log.warn('unknown command: %s', cmd)
       break;
   }
 }
@@ -192,21 +220,22 @@ function onSubResubHandler(channel, username, months, message, userstate, method
 
 function onJoinHandler(channel, username, self) {
   if (self) {
-    console.log('Bot joined channel: %s %s %s', channel, username, self);
+    log.info('Bot joined channel: %s %s %s', channel, username, self);
   }
 }
 
 // Called every time the bot connects to Twitch chat
 function onConnectedHandler(addr, port) {
-  console.log(`* Connected to ${addr}:${port}`);
+  log.info(`* Connected to ${addr}:${port}`);
 }
 
 function onErrorHandler(e) {
-  console.error(e)
+  log.error(e)
   throw new Error('CRITICAL ERROR: ' + e.message);
 }
 
 async function updateWheel(user, message, target) {
+  log.debug('updateWheel called: %s %s %s', user, message, target)
   if (!message) { return;  }
   message = message.toLowerCase();
 
@@ -218,7 +247,7 @@ async function updateWheel(user, message, target) {
   categories.forEach(category =>{
     category.split(/\s+/).forEach(word => {  
       if (message.indexOf(word) != -1) {
-        //console.log(`Got one: ${categories[i]}`);
+        log.debug(`Got one: ${category}`);
         votedCategory = category;
         if (votes > 0) {
           addVote(user, votedCategory, target);
@@ -235,6 +264,7 @@ async function updateWheel(user, message, target) {
 }
 
 async function printWheel(channel) {
+  log.debug('printWheel called: %s', target)
   channel=channel.replace(/^\#/, '');
   const result= await db.all(SQL.categoryCounts, [channel]);
   let finalString= "Current votes: "
@@ -246,6 +276,7 @@ async function printWheel(channel) {
 }
 
 function clearWheel(targetCategory, channel) {
+  log.debug('clearWheel called: %s', targetCategory)
   channel=channel.replace(/^\#/, '');
   db.run(SQL.deleteUserVotes, [channel, `%${targetCategory}%`]);
 }
@@ -291,3 +322,17 @@ async function getVoteCount(user, channel) {
   if(result[0]){return result[0].count}
   else{return 0}
 }
+// healthcheck ping
+var http = require('http');
+http.createServer(function (req, res) {
+  log.debug('healthcheck server pinged')
+  res.writeHead(200, {'Content-Type': 'text/plain'});
+  res.write('Hello World!');
+  res.end();
+}).listen(process.env.PORT || 8080);
+
+// keep alive function
+http.get(`http://127.0.0.1:${process.env.PORT || 8080}`); //test
+setInterval(function() {
+    http.get(`http://127.0.0.1:${process.env.PORT || 8080}`);
+}, 300000);
