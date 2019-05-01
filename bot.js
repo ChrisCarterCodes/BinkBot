@@ -1,55 +1,59 @@
 const path = require('path');
-require('dotenv').config({path: path.join(__dirname, '.env')});
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const tmi = require('tmi.js');
+const TmiContext = require('./tmicontext.js');
+
 const config = require('./config/config');
-const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.cached.Database('weights');
+const sqlite = require('sqlite');
+const dbPromise = sqlite.open('betBot', { Promise });
 const SQL = require('./config/sql');
+let db;
+let client;
+let gtBetMode = false;
+let bets = {};
+let winners = [];
 const log = require('./lib/util/Logger');
 
 log.debug(JSON.stringify(config));
 
-const categories= [ "enemizer", "boss shuffle", "retro", "keysanity", "inverted", "basic",
-                      "standard", "open",
-                      "kill pig", "all dungeons", 
-                      "assured", "random weapon", "swordless",
-                      "normal", "hard" ];
-
-//Define base db tables
-db.serialize(function() {
+//initalize the database
+~async function () {
+  db = await dbPromise
   db.run(SQL.createUserVotesTable);
-});
-// Define configuration options
-const opts = {
-  connection: {
-    reconnect: true // This
-  },
-  identity: {
-    username: config.Bot.username,
-    password: config.Bot.token
-  },
-  channels: config.Bot.channels
-};
+  //db.run("drop table userinfo");
+  db.run(SQL.createUserInfoTable);
 
-log.debug(JSON.stringify(opts));
+  // Define configuration options
+  const opts = {
+    connection: {
+      reconnect: true // This
+    },
+    identity: {
+      username: config.Bot.username,
+      password: config.Bot.token
+    },
+    channels: config.Bot.channels
+  };
+  log.debug(JSON.stringify(opts));
 
-// Create a client with our options
-const client = new tmi.client(opts);
-let gtBetMode= false;
-let bets= {};
-let winners=[];
+  // Create a client with our options
+  client = new tmi.client(opts);
 
-// Register our event handlers (defined below)
-client.on('message', onMessageHandler);
-client.on('connected', onConnectedHandler);
-client.on('subscription', onSubHandler);
-client.on('resub', onSubResubHandler);
-client.on('join', onJoinHandler);
-client.on('error', onErrorHandler);
+  // Register our event handlers (defined below)
+  client.on('message', onMessageHandler);
+  client.on('connected', onConnectedHandler);
+  client.on('subscription', onSubHandler);
+  client.on('resub', onSubResubHandler);
+  client.on('subgift', onSubGiftHandler);
+  client.on('join', onJoinHandler);
+  client.on('error', onErrorHandler);
 
-// Connect to Twitch:
-client.connect();
+  // Connect to Twitch:
+  client.connect();
+
+  return true;
+}()
 
 // process end event listener
 function killHandler(){
@@ -62,55 +66,57 @@ function killHandler(){
 process.on('SIGINT', killHandler);
 process.on('SIGTERM', killHandler);
 
-function gtBets(context, target, action, modFlag){
+const categories = ["enemizer", "boss shuffle", "retro", "keysanity", "inverted", "basic",
+  "standard", "open",
+  "kill pig", "all dungeons",
+  "assured", "random weapon", "swordless",
+  "normal", "hard"];
+
+function gtBets(context, target, action, modFlag) {
   log.debug('gtBets called: %s %s %s %s', JSON.stringify(context), target, action, modFlag)
-  const user=context.username;
-    if(action == 'open' && !gtBetMode && modFlag){
-      //enable bets
-      gtBetMode=true;
-      //reset leftover bets
-      bets={};
-      //reset the last winners
-      winners=[];
-      client.say(target, `Get your bets in! type '!bet <number>' to place your bets for the GT chest!`);
+  const user = context.username;
+  if (action == 'open' && !gtBetMode && modFlag) {
+    //enable bets
+    gtBetMode = true;
+    //reset leftover bets
+    bets = {};
+    //reset the last winners
+    winners = [];
+    client.say(target, `Get your bets in! type '!bet <number>' to place your bets for the GT chest!`);
+  }
+  else if (action == 'close' && gtBetMode && modFlag) {
+    gtBetMode = false;
+    client.say(target, `Bets are closed! Best of luck everyone!`);
+  }
+  else if (!isNaN(action)) {
+    if (!gtBetMode) {
+      client.say(target, `You either missed the betting, or we're not headed to GT. Or you're bored.`);
+      return;
     }
-    else if(action == 'close' && gtBetMode && modFlag){ 
-      gtBetMode=false;
-      client.say(target, `Bets are closed! Best of luck everyone!`);
+    if (action <= 22 && action >= 1) {
+      bets[user] = action;
     }
-    else if(!isNaN(action)){
-      if (!gtBetMode){
-        client.say(target, `You either missed the betting, or we're not headed to GT. Or you're bored.`);
-        return;
-      }
-      if(action <=22 && action>=1){
-        bets[user] = action;
-      }
-      else{
-        client.say(target, `There's 22 checks in GT, buddy.`);
-      }
+    else {
+      client.say(target, `There's 22 checks in GT, buddy.`);
     }
-    log.debug(JSON.stringify(bets));
+  }
 }
 
-function gtWinner(target, context, action){
-  log.debug('gtWinner called: %s %s %s', target, JSON.stringify(context), action)
-  log.debug(winners);
-  if (winners.length>0){
-      log.warn('winners were already determined: %s ', winners.join(" , "));
-      client.say(target, `The winners have already been determined, they were ${winners.join(" , ")}`);
-      return;
+function gtWinner(target, context, action) {
+  if (winners.length > 0) {
+    client.say(target, `The winners have already been determined, they were ${winners.join(" , ")}`);
+    return;
   }
-  if(!gtBetMode){
-    if(action <=22 && action>=1){
-      for (const user in bets){
-        if (bets[user] == action){winners.push(user)}
+  if (!gtBetMode) {
+    if (action <= 22 && action >= 1) {
+      for (user in bets) {
+        if (bets[user] == action) { winners.push(user); incrementUserVotes(user, target); }
       }
-      if(winners.length == 0){winners=['no one :c']}
+      if (winners.length == 0) { winners = ['no one :c'] }
       client.say(target, `The winning chest was ${action}! Congratulations to ${winners.join(" , ")}`);
       log.verbose('winning chest: %s. Winner: %s', action, winners.join(" , "))
     }
-    else{
+    else {
       client.say(target, `There's 22 checks in GT, buddy.`);
       log.warn('action exceeded 22')
     }
@@ -118,25 +124,27 @@ function gtWinner(target, context, action){
 }
 
 // Called every time a message comes in
-function onMessageHandler (target, context, msg, self, data) {
+async function onMessageHandler(target, context, msg, self, data) {
+/*   console.log(msg);
+  console.log(self);
+  console.log(context);
+  console.log(data); */
 
   if (self) { log.debug('ignoring message from self'); return; } // Ignore messages from the bot
 
-  const username = context['display-name'];
-  log.verbose('Message received: %s[%s]: %s', username, target, msg);
-  log.debug('Message metadata: isSelf %s, context: %s, data: %s', self, JSON.stringify(context), JSON.stringify(data));
-
   // Remove whitespace from chat message
   const commandName = msg.trim();
-  const commandParts= commandName.split(" ");
+  const commandParts = commandName.split(" ");
 
-  // determine permission level
-  const modFlag=isMod(context);
+  let tmiContext = TmiContext.parse(context);
+
+  log.verbose('Message received: %s[%s]: %s', tmiContext.username, target, msg);
+  log.debug('Message metadata: isSelf %s, context: %s, data: %s', self, JSON.stringify(context), JSON.stringify(data));
 
   let outputText = ''; // initialize in case we use
   const cmd = commandParts[0].toLowerCase();
 
-  if(cmd[0] !== '!') return // we don't have a command, don't process
+  if (cmd[0] !== '!') return // we don't have a command, don't process
 
   log.verbose('Parsing command: %s', cmd);
   log.debug('Full command parts: %s', commandParts);
@@ -144,7 +152,7 @@ function onMessageHandler (target, context, msg, self, data) {
     case '!bet':
       log.debug('processing !bet command')
       if (commandParts.length > 1) {
-        gtBets(context, target, commandParts[1], modFlag);
+        gtBets(context, target, commandParts[1], tmiContext.isMod);
       }
       else {
         client.say(target, `Place your bets on GT! Just enter '!bet <number>' to bet!`);
@@ -152,7 +160,7 @@ function onMessageHandler (target, context, msg, self, data) {
       break;
     case '!betwinner':
       log.debug('processing !betwinner command')
-      if (commandParts.length > 1 && modFlag) {
+      if (commandParts.length > 1 && tmiContext.isMod) {
         gtWinner(target, context, commandParts[1]);
       }
       break;
@@ -164,22 +172,31 @@ function onMessageHandler (target, context, msg, self, data) {
       break;
     case '!wheeladd':
       log.debug('processing !wheeladd command')
-      if (commandParts.length > 2 && isMod) {
-        updateWheel(commandParts[1], msg, target);
+      if (commandParts.length > 1) {
+        updateWheel(tmiContext.username, msg, target);
       }
       break;
     case '!wheeloptions':
       log.debug('processing !wheeloptions command')
       client.say(target, `Valid categories: ${categories.join(" , ")}`);
       break;
-    case '!wheelvotes':
-      log.debug('processing !wheelvotes command')
+    case '!wheelweight':
+      log.debug('processing !wheelweight command')
       printWheel(target);
+      break;
+    case '!wheelvotes':
+    let votes= await getVoteCount(tmiContext.username, target)
+      client.say(target, `@${tmiContext.username}, you have ${ votes } vote${votes!=1 ? "s":""} for the wheel.`);
       break;
     case '!wheelclear':
       log.debug('processing !wheelclear command')
-      if (commandParts.length > 1 && isMod) {
-        clearWheel(commandParts[1]);
+      if (commandParts.length > 1 && tmiContext.isMod) {
+        clearWheel(commandParts[1], target);
+      }
+      break;
+    case '!adduservote':
+      if (commandParts.length > 1 && tmiContext.isMod) {
+        incrementUserVotes(commandParts[1], target);
       }
       break;
     default:
@@ -188,148 +205,123 @@ function onMessageHandler (target, context, msg, self, data) {
   }
 }
 
-function onSubHandler (channel, username, method, message, userstate) {
-  onSubResubHandler(channel, username, 1 , message, userstate, method)
+function onSubHandler(channel, username, method, message, userstate) {
+  onSubResubHandler(channel, username, 1, message, userstate, method)
 }
 
-function onSubResubHandler (channel, username, months, message, userstate, methods) {
+function onSubGiftHandler(channel, username, streakMonths, recipient, method, userstate){
+  onSubResubHandler(channel, recipient, 1, null, userstate, method)
+}
+
+function onSubResubHandler(channel, username, months, message, userstate, methods) {
+  incrementUserVotes(username, channel);
   updateWheel(username, message, channel);
 }
 
 function onJoinHandler(channel, username, self) {
-  log.info('Bot joined channel: %s %s %s', channel, username, self);
-  //client.say(channel, 'Kyuobot is online!');
+  if (self) {
+    log.info('Bot joined channel: %s %s %s', channel, username, self);
+  }
 }
 
 // Called every time the bot connects to Twitch chat
-function onConnectedHandler (addr, port) {
+function onConnectedHandler(addr, port) {
   log.info(`* Connected to ${addr}:${port}`);
 }
 
-function onErrorHandler(e){
+function onErrorHandler(e) {
   log.error(e)
   throw new Error('CRITICAL ERROR: ' + e.message);
 }
 
-function updateWheel (user, message, target){
+async function updateWheel(user, message, target) {
   log.debug('updateWheel called: %s %s %s', user, message, target)
-  if(!message){return;}
-  message= message.toLowerCase();
-  
-  const length= categories.length;
-  let votedCategory= "Invalid";
-  let i
-  for( i=0; i < length; i++){
-    if (message.indexOf(categories[i])!=-1) {
-      log.debug(`Got one: ${categories[i]}`);
-      votedCategory= categories[i];
-      break;
-    }
+  if (!message) { return;  }
+  message = message.toLowerCase();
+
+  let votedCategory = "Invalid";
+  let votes = await getVoteCount(user, target);
+  if (votes <=0){
+    client.say(target , `Sorry @${user}, but you don't currently have any available votes.`)
   }
-  if(votedCategory == "Invalid"){
-    if(message.includes('!wheeladd')){
-      client.say(target, `You didn't request a variation to put weight into! Type !wheel for more info.`);
-    }
-  }
-  else{
-    log.debug(votedCategory);
-    const insertStmt= db.prepare(SQL.insertUserVote);
-    insertStmt.run(user, votedCategory);
-    insertStmt.finalize();
-    const sql= SQL.allUserVotes;
-    db.all(sql, [], (err, rows) => {
-      if (err) {
-        throw err;
+  categories.forEach(category =>{
+    category.split(/\s+/).forEach(word => {  
+      if (message.indexOf(word) != -1) {
+        log.debug(`Got one: ${category}`);
+        votedCategory = category;
+        if (votes > 0) {
+          addVote(user, votedCategory, target);
+        }
       }
-      rows.forEach((row) => {
-        log.debug(row.categoryName+" : "+row.userName);
-      });
     });
+  });
+  if (votedCategory == "Invalid") {
+    if (message.includes('!wheeladd')) {
+      client.say(target, `You didn't request a valid variation to put weight into! Type !wheeloptions for more info.`);
+      return;
+    }
   }
 }
 
-function printWheel(target){
+async function printWheel(channel) {
   log.debug('printWheel called: %s', target)
-  const categories= { "Variation":{
-                        "enemizer": {"count": 0, "users": null},
-                        "boss shuffle": {"count": 0, "users": null},
-                        "retro": {"count": 0, "users": null},
-                        "keysanity": {"count": 0, "users": null},
-                        "inverted": {"count": 0, "users": null},
-                        "basic": {"count": 0, "users": null}
-                      },
-                      "State":{
-                        "standard": {"count": 0, "users": null},
-                        "open": {"count": 0, "users": null}
-                      },
-                      "Goal":{
-                        "kill pig": {"count": 0, "users": null},
-                        "all dungeons": {"count": 0, "users": null}
-                      },
-                      "Uncle":{ 
-                        "assured": {"count": 0, "users": null},
-                        "random weapon": {"count": 0, "users": null},
-                        "swordless": {"count": 0, "users": null}
-                      },
-                      "Difficulty":{
-                        "normal": {"count": 0, "users": null},
-                        "hard": {"count": 0, "users": null} 
-                      }
-                    }
-  const message= "Current Votes: "
-  const sql= SQL.categoryCounts;
-  const response= new Promise((resolve, reject) => {
-    db.all(sql, [], (err, rows) => {
-      if (err) {
-        throw err;
-      }
-      else{
-        let finalString="";
-        rows.forEach((row) => {
-        categories[row.categoryName]=row.counts;
-        categories[row.categoryName]=row.users;
-        finalString += `${row.categoryName} : ${row.counts} (${row.users})      `;
-        });
-        resolve(finalString);
-      }
-    });
+  channel=channel.replace(/^\#/, '');
+  const result= await db.all(SQL.categoryCounts, [channel]);
+  let finalString= "Current votes: "
+  result.forEach(row => {
+    finalString += `${row.categoryName} : ${row.counts}      `;
   });
-  response.then((value) =>{
-    if(value){
-      client.say(target, `${value}`);
-    }
-    else{
-      client.say(target, "No votes!");
-    }
-  });
+  if(finalString === "Current votes: "){finalString+="none! :C"}
+  client.say(channel, `${finalString}`);
 }
 
-function clearWheel(targetCategory){
+function clearWheel(targetCategory, channel) {
   log.debug('clearWheel called: %s', targetCategory)
-  const deleteStmt= db.prepare (SQL.deleteUserVotes);
-  deleteStmt.run("%"+targetCategory+"%");
-  deleteStmt.finalize();
+  channel=channel.replace(/^\#/, '');
+  db.run(SQL.deleteUserVotes, [channel, `%${targetCategory}%`]);
 }
 
-function isMod(context){
-  log.debug('isMod called: %s', JSON.stringify(context))
-  if(context['badges']){
-    if(context['user-type'] == "mod" || !context['badges']['broadcaster'] === null){
-      return true;
-    }
-  }
+
+
+function incrementUserVotes(user, channel) {
+  channel=channel.replace(/^\#/, '');
+  db.run(SQL.incrementUserVote, [channel, user])
+  db.all(SQL.getUserInfo, [channel]).then(function(result){
+    console.log(result);
+  }).catch(function(error) {
+    console.log(error);
+  });
 }
 
-function isSub(context){
-  log.debug('isSub called: %s', JSON.stringify(context))
-  if(context['badges']){
-    if(context['badges']['subscriber'] ){
-      return true;
-    }
-    return true;
-  }
+function decrementUserVotes(user, channel) {
+  channel=channel.replace(/^\#/, '');
+  db.run(SQL.decrementUserVote, [channel, user]);
+  db.all(SQL.getUserInfo, [channel]).then(function(result){
+    console.log(result);
+  }).catch(function(error) {
+    console.log(error);
+  });
 }
 
+async function addVote(user, votedCategory, channel) {
+  channel=channel.replace(/^\#/, '');
+  db.run(SQL.addVote, [channel, user, votedCategory]).then(
+    decrementUserVotes(user, channel)).then(
+   client.say(channel, `@${user}, your vote for ${votedCategory} was recorded.`)
+  );
+  db.all(SQL.allUserVotes, [channel]).then(function(result){
+    console.log(result);
+  }).catch(function(error) {
+    console.log(error);
+  })
+}
+
+async function getVoteCount(user, channel) {
+  channel=channel.replace(/^\#/, '');
+  const result= await db.all(SQL.getVoteCount, [channel, user])
+  if(result[0]){return result[0].count}
+  else{return 0}
+}
 // healthcheck ping
 var http = require('http');
 http.createServer(function (req, res) {
@@ -341,6 +333,6 @@ http.createServer(function (req, res) {
 
 // keep alive function
 http.get(`http://127.0.0.1:${process.env.PORT || 8080}`); //test
-setInterval(function() { 
+setInterval(function() {
     http.get(`http://127.0.0.1:${process.env.PORT || 8080}`);
 }, 300000);
