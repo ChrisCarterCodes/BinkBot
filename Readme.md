@@ -21,11 +21,30 @@ At this time the bot was developed on top of Node v10.15.3
 All \<number\> parameter commands are restricted to 1-21 for valid chest numbers
 
 ### Wheel Weight Tracker
-* **!wheelvotes** - Shows current count of votes for each variation category. 
-* **!wheeladd** <username> <choice> - Manually updates a user's wheel choice, usable in case they forget to add a category in their resub or type it wrong.
-  * **!wheelclear** <choice> - Removes votes for a category after the wheel picks it.
+
+The bot now adds a vote to a user every time a user subs, resubs, or is gifted a sub, as well as when they win the bet game.
+
+* !wheelweight - Shows current count of votes for each variation category.
+* !wheelvotes - Sends a message telling the user how many available votes they have
+* !wheeladd <choice> - Users can use a vote to add a weight to the wheel. Doesn't let them if they have no votes.
+* **!wheelclear** <choice> - Removes votes for a category after the wheel picks it.
+* !wheeloptions - Shows valid wheel category options that can be in the wheeladd or sub messages
+* **!adduservote** <username> -  Lets mods manually add a single weight vote to a user if they earned one while the bot was offline or through other means.
 
 All **bold** commands are restricted to moderator/host only commands
+
+The categories are:
+
+* Mode:
+    * "enemizer", "boss shuffle", "retro", "keysanity", "inverted", "basic"
+* Start:
+    * "standard", "open"
+* Goal:
+    * "kill pig", "all dungeons"
+* Uncle's gift:
+    * "assured", "random weapon", "swordless"
+* Difficulty:
+    * "normal", "hard"
 
 ## Setup and Launch
 

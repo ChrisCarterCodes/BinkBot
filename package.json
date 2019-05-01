@@ -6,6 +6,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "engines": {
+    "node": ">=10.15.3",
+    "npm": ">=5"
+  },
   "keywords": [
     "Twitch",
     "Bot",
@@ -14,9 +18,14 @@
   "author": "Christopher Carter",
   "license": "ISC",
   "dependencies": {
-    "config": "^3.1.0",
-    "node-irc": "0.0.4",
+    "dotenv": "^7.0.0",
     "sqlite": "^3.0.3",
-    "tmi.js": "^1.4.2"
+    "sqlite3": "^4.0.6",
+    "tmi.js": "^1.4.2",
+    "winston": "^3.2.1"
+  },
+  "devDependencies": {
+    "eslint": "^5.16.0",
+    "gulp": "^4.0.1"
   }
 }
