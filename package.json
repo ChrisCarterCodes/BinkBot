@@ -4,8 +4,7 @@
   "description": "Bot for handling custom behaviors on Twitch stream",
   "main": "bot.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "set NODE_ENV=prod&& node bot.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "engines": {
     "node": ">=10.15.3",
