@@ -8,10 +8,7 @@ class TmiContext{
     static parse(context){
         let username=context['username'];
         let isMod, isSub = false;
-        console.log(context);
-        if(context.hasOwnProperty('badges')){
-          console.log(context['user-type'] === "mod");
-          console.log(context.badges.hasOwnProperty('broadcaster'));
+        if(context.badges){
           if((context['user-type'] === "mod") || (context.badges.hasOwnProperty('broadcaster'))){
             isMod=true;
           }
