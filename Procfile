@@ -1,1 +1,1 @@
-web: container:push --app kyoudaibot
+web: container:push --app binkbot
