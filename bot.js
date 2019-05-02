@@ -264,7 +264,7 @@ async function updateWheel(user, message, target) {
 }
 
 async function printWheel(channel) {
-  log.debug('printWheel called: %s', target)
+  log.debug('printWheel called: %s', channel)
   channel=channel.replace(/^\#/, '');
   const result= await db.all(SQL.categoryCounts, [channel]);
   let finalString= "Current votes: "
