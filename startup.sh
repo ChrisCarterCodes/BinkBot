@@ -102,3 +102,8 @@ if [[ $confirm == 'y' ]]; then
 		-e LOG_LEVEL='debug' \
 		-e LOG_IS_LOCAL=true
 fi
+if [[ $confirm == 'n' ]]; then
+	echo "Running bot locally"
+	npm install
+	node bot.js
+fi

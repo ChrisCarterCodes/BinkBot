@@ -89,3 +89,8 @@ if($confirm -eq 'y'){
 	$run_command = "$BASEDIR\docker\scripts\windows\run.bat -e TWITCH_USERNAME=$USERNAME -e TWITCH_OAUTH_TOKEN=$OAUTH_TOKEN -e TWITCH_TARGET_CHANNELS=$CHANNELS_TO_JOIN -e LOG_LEVEL=debug -e LOG_IS_LOCAL=true"
     cmd.exe /c $run_command
 }
+if($confirm -eq 'n'){
+    echo "Running bot locally"
+    cmd.exe /c "npm install"
+    cmd.exe /c "node bot.js"
+}
