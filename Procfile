@@ -1,1 +1,1 @@
-web: container:push --app binkbot
+web: ./scripts/deploy.sh
