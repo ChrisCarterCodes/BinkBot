@@ -13,6 +13,7 @@ let client;
 let gtBetMode = false;
 let bets = {};
 let winners = [];
+let categories = [];
 const log = require('./lib/util/Logger');
 
 log.debug(JSON.stringify(config));
@@ -23,7 +24,8 @@ log.debug(JSON.stringify(config));
   db.run(SQL.createUserVotesTable);
   //db.run("drop table userinfo");
   db.run(SQL.createUserInfoTable);
-
+  db.exec(SQL.createCategoriesTable);
+  getCategories();
   // Define configuration options
   const opts = {
     connection: {
@@ -56,7 +58,7 @@ log.debug(JSON.stringify(config));
 }()
 
 // process end event listener
-function killHandler(){
+function killHandler() {
   log.info('killing connections');
   client.disconnect();
   log.info('exiting');
@@ -66,11 +68,8 @@ function killHandler(){
 process.on('SIGINT', killHandler);
 process.on('SIGTERM', killHandler);
 
-const categories = ["enemizer", "boss shuffle", "retro", "keysanity", "inverted", "basic",
-  "standard", "open",
-  "kill pig", "all dungeons",
-  "assured", "random weapon", "swordless",
-  "normal", "hard"];
+
+
 
 function gtBets(context, target, action, modFlag) {
   log.debug('gtBets called: %s %s %s %s', JSON.stringify(context), target, action, modFlag)
@@ -125,10 +124,10 @@ function gtWinner(target, context, action) {
 
 // Called every time a message comes in
 async function onMessageHandler(target, context, msg, self, data) {
-/*   console.log(msg);
-  console.log(self);
-  console.log(context);
-  console.log(data); */
+  /*   console.log(msg);
+    console.log(self);
+    console.log(context);
+    console.log(data); */
 
   if (self) { log.debug('ignoring message from self'); return; } // Ignore messages from the bot
 
@@ -176,17 +175,28 @@ async function onMessageHandler(target, context, msg, self, data) {
         updateWheel(tmiContext.username, msg, target);
       }
       break;
+    case '!wheeladdfor':
+      log.debug('processing !wheeladd command')
+      if (commandParts.length > 2 && tmiContext.isMod) {
+        updateWheel(commandParts[1], msg, target);
+      }
+      break;
     case '!wheeloptions':
       log.debug('processing !wheeloptions command')
+      getCategories();
       client.say(target, `Valid categories: ${categories.join(" , ")}`);
       break;
     case '!wheelweight':
       log.debug('processing !wheelweight command')
       printWheel(target);
       break;
+    case '!wheelweights':
+        log.debug('processing !wheelweights command')
+        printWheel(target);
+        break;
     case '!wheelvotes':
-    let votes= await getVoteCount(tmiContext.username, target)
-      client.say(target, `@${tmiContext.username}, you have ${ votes } vote${votes!=1 ? "s":""} for the wheel.`);
+      let votes = await getVoteCount(tmiContext.username, target)
+      client.say(target, `@${tmiContext.username}, you have ${votes} vote${votes != 1 ? "s" : ""} for the wheel.`);
       break;
     case '!wheelclear':
       log.debug('processing !wheelclear command')
@@ -209,13 +219,13 @@ function onSubHandler(channel, username, method, message, userstate) {
   onSubResubHandler(channel, username, 1, message, userstate, method)
 }
 
-function onSubGiftHandler(channel, username, streakMonths, recipient, method, userstate){
+function onSubGiftHandler(channel, username, streakMonths, recipient, method, userstate) {
   onSubResubHandler(channel, recipient, 1, null, userstate, method)
 }
 
-function onSubResubHandler(channel, username, months, message, userstate, methods) {
-  incrementUserVotes(username, channel);
-  updateWheel(username, message, channel);
+async function onSubResubHandler(channel, username, months, message, userstate, methods) {
+  await incrementUserVotes(username, channel);
+  //updateWheel(username, message, channel);
 }
 
 function onJoinHandler(channel, username, self) {
@@ -236,103 +246,158 @@ function onErrorHandler(e) {
 
 async function updateWheel(user, message, target) {
   log.debug('updateWheel called: %s %s %s', user, message, target)
-  if (!message) { return;  }
+  getCategories();
+  if (!message) { log.debug('updateWheel: no message'); return; }
   message = message.toLowerCase();
 
   let votedCategory = "Invalid";
   let votes = await getVoteCount(user, target);
-  if (votes <=0){
-    client.say(target , `Sorry @${user}, but you don't currently have any available votes.`)
+  log.info(`Votes: ${user} : ${votes}`);
+  if (votes <= 0 && user != "kyoudai_shojin") {
+    client.say(target, `Sorry @${user}, but you don't currently have any available votes.`)
+    return;
   }
-  categories.forEach(category =>{
-    category.split(/\s+/).forEach(word => {  
-      if (message.indexOf(word) != -1) {
+
+  let maxMatchCount=0;
+  for (category of categories){
+    matchCount=0;
+    for(word of category.toLowerCase().split(/\s+/)){
+      if (message.indexOf(word.toLowerCase()) != -1) {
         log.debug(`Got one: ${category}`);
-        votedCategory = category;
-        if (votes > 0) {
-          addVote(user, votedCategory, target);
+        matchCount++;
+        if (matchCount>maxMatchCount){
+          maxMatchCount = matchCount
+          votedCategory = category;
+        }
+        else if (matchCount == maxMatchCount){
+          //Currently a tie, let's mark it as such. if the next match pushes it higher it'll supercede
+          //Otherwise we're gonna tell the user that we found two equal options so they need to be more specific
+          votedCategory= "tie"
         }
       }
-    });
-  });
+      log.debug(`checking: ${category}`);
+    }
+  }
+
   if (votedCategory == "Invalid") {
     if (message.includes('!wheeladd')) {
-      client.say(target, `You didn't request a valid variation to put weight into! Type !wheeloptions for more info.`);
+      client.say(target, `@${user} You didn't request a valid variation to put weight into! Type !wheeloptions for more info.`);
       return;
     }
+  }
+  else if( votedCategory == "tie"){
+    if (message.includes('!wheeladd')) {
+      client.say(target, `@${user} We found at least two categories that matched your request. Try being a bit more specific!`);
+      return;
+    }
+  }
+  else{
+    //Add the vote
+    if (votes > 0 || user == "kyoudai_shojin") {
+      addVote(user, votedCategory, target);
+      votes--;
+    } 
   }
 }
 
 async function printWheel(channel) {
+  channel = channel.replace(/^\#/, '');
   log.debug('printWheel called: %s', channel)
-  channel=channel.replace(/^\#/, '');
-  const result= await db.all(SQL.categoryCounts, [channel]);
-  let finalString= "Current votes: "
-  result.forEach(row => {
-    finalString += `${row.categoryName} : ${row.counts}      `;
-  });
-  if(finalString === "Current votes: "){finalString+="none! :C"}
-  client.say(channel, `${finalString}`);
+  const voteResult = await db.all(SQL.allUserVotes, channel);
+  //console.log(voteResult);
+  let currentGroup='';
+  let finalString='';
+  let modifier=1;
+  for (row of voteResult){
+    (row.categoryName == "Basic Bitch" || row.categoryName == "Advanced") ? modifier=5 : modifier=1;
+    console.log(row)
+    if (row.categoryGroup == currentGroup){
+      finalString += `${row.categoryName} : ${row.count+modifier} |      `;
+    }
+    else{
+      if(currentGroup !== ''){client.say(channel, finalString);}
+      currentGroup=row.categoryGroup;
+      finalString = `${currentGroup} ~ `
+      finalString += `${row.categoryName} : ${row.count+modifier} |      `;
+    }
+  }
+  client.say(channel, finalString);
+  
 }
 
 function clearWheel(targetCategory, channel) {
   log.debug('clearWheel called: %s', targetCategory)
-  channel=channel.replace(/^\#/, '');
+  channel = channel.replace(/^\#/, '');
   db.run(SQL.deleteUserVotes, [channel, `%${targetCategory}%`]);
 }
 
 
 
-function incrementUserVotes(user, channel) {
-  channel=channel.replace(/^\#/, '');
+async function incrementUserVotes(user, channel) {
+  channel = channel.replace(/^\#/, '');
+  user=user.toLowerCase();
   db.run(SQL.incrementUserVote, [channel, user])
-  db.all(SQL.getUserInfo, [channel]).then(function(result){
-    console.log(result);
-  }).catch(function(error) {
-    console.log(error);
-  });
+  let result=await db.all(SQL.getUserInfo, [channel]);
+  log.debug('incrementUserVotes:');
+  //console.log(result);
 }
 
-function decrementUserVotes(user, channel) {
-  channel=channel.replace(/^\#/, '');
+async function decrementUserVotes(user, channel) {
+  channel = channel.replace(/^\#/, '');
+  user=user.toLowerCase();
   db.run(SQL.decrementUserVote, [channel, user]);
-  db.all(SQL.getUserInfo, [channel]).then(function(result){
-    console.log(result);
-  }).catch(function(error) {
-    console.log(error);
-  });
+  let result= await db.all(SQL.getUserInfo, [channel]);
+  log.debug('decrementUserVotes:');
+  //console.log(result);
 }
 
 async function addVote(user, votedCategory, channel) {
-  channel=channel.replace(/^\#/, '');
-  db.run(SQL.addVote, [channel, user, votedCategory]).then(
-    decrementUserVotes(user, channel)).then(
-   client.say(channel, `@${user}, your vote for ${votedCategory} was recorded.`)
-  );
-  db.all(SQL.allUserVotes, [channel]).then(function(result){
-    console.log(result);
-  }).catch(function(error) {
-    console.log(error);
-  })
+  channel = channel.replace(/^\#/, '');
+  user=user.toLowerCase()
+  await db.run(SQL.addVote, [channel, user, votedCategory]);
+  await decrementUserVotes(user, channel);
+  client.say(channel, `@${user}, your vote for ${votedCategory} was recorded.`);
+  let result=await db.all(SQL.allUserVotes, [channel])
+  log.debug('decrementUserVotes:');
+ //console.log(result);
 }
 
 async function getVoteCount(user, channel) {
-  channel=channel.replace(/^\#/, '');
-  const result= await db.all(SQL.getVoteCount, [channel, user])
-  if(result[0]){return result[0].count}
-  else{return 0}
+  channel = channel.replace(/^\#/, '');
+  user=user.toLowerCase(); 
+  log.info(` info: ${channel} ${user}`);
+  const result = await db.all(SQL.getVoteCount, [channel, user])
+  console.log(result);
+  if (result[0]) { return result[0].count }
+  else { return 0 }
 }
+
+async function getCategories() {
+  const result = await db.all(SQL.getCategories, [])
+  console.log(result);
+  categories = []
+  for (row of result){
+      categories.push(row.categoryName)
+  }
+  console.log(categories);
+}
+
 // healthcheck ping
 var http = require('http');
 http.createServer(function (req, res) {
   log.debug('healthcheck server pinged')
-  res.writeHead(200, {'Content-Type': 'text/plain'});
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
   res.write('Hello World!');
   res.end();
 }).listen(process.env.PORT || 8080);
 
 // keep alive function
 http.get(`http://127.0.0.1:${process.env.PORT || 8080}`); //test
-setInterval(function() {
-    http.get(`http://127.0.0.1:${process.env.PORT || 8080}`);
+setInterval(function () { 
+  http.get(`http://127.0.0.1:${process.env.PORT || 8080}`);
 }, 300000);
+
+/* setInterval(function(){
+  client.say('bencreighton',`!backseat`);
+}, 60000);
+ */
